@@ -22,7 +22,7 @@ knitr::opts_chunk$set(fig.align = 'center',
 Chlorides are frequently elevated in Maine urban streams because of use of salt
 for deicing of roads, parking areas, sidewalks, and paths in winter.  While
 water quality standards are often written in terms of chlorides, it may be
-better to think about chlorides as a measure of the salinity. Physiologically,
+better to think about chlorides as a measure of salinity. Physiologically,
 it is probably salinity or osmolarity that principally affects organisms in the
 stream, not chlorides *per se*. The data we examine here is based on measurement
 of conductivity, which is converted to an estimate of in-stream chlorides based

@@ -1,7 +1,7 @@
 ---
 title: "Classificatin Tree Models of 'Diurnal Exceedences' on Long Creek"
 author: "Curtis C. Bohlen, Casco Bay Estuary Partnership."
-date: "01/12/2021"
+date: "Updated 11/01/2021"
 output:
   github_document:
     toc: true
@@ -19,32 +19,6 @@ knitr::opts_chunk$set(fig.align = 'center',
 ```
 
 # Introduction
-The Long Creek Watershed, almost three and a half square miles in area, is
-dominated by commercial land use. The Maine Mall is one of the largest land
-owners in the watershed, and it is surrounded by a range of commercial
-businesses, from medical offices, to car washes.  About a third of the watershed
-in impervious surfaces like roads, parking lots, and rooftops.
-
-Landowners with an acre or more of impervious area are required to get a Clean
-Water Act permit for stormwater discharges from their property.  The LCWMD
-provides an alternative for landowners to working to receive an individual
-permit. Landowners who elect to participate in the The Long Creek Watershed
-Management District receive a General Permit, in return for providing funding to
-the District, and facilitating the work of the district by permitting access to
-their property for certain activities.
-
-For more information on LCWMD, see [their web site](restorelongcreek.org).
-
-Over the past decade, LCWMD has contracted with several consulting firms to
-provide  water quality monitoring services along Long Creek.  This has produced
-one of the most extensive and best documented data set from the Northeastern US 
-looking at water quality conditions in an urban stream.
-
-GZA Geoenvironmental Incorporated (GZA) has been the primary monitoring
-contractor for LCWMD for several years, and in 2019, they conducted a thorough
-review of LCWMD data. These analyses are based on their summary data sets, and
-recapitulate and extend their analyses.
-
 ## Are Water Quality Criteria Met?
 The primary question we ask in this Notebook, is whether water quality criteria 
 are met. In particular, we explore classification tree models to gain insight 
@@ -108,7 +82,6 @@ another stressor correlated with these temperature metrics.
 ```{r libraries}
 library(rpart)
 library(rpart.plot)
-#library(randomForest)  # random forest models provide little explanatory power.
 
 library(tidyverse)
 library(readr)
@@ -116,14 +89,12 @@ library(readr)
 library(CBEPgraphics)
 load_cbep_fonts()
 theme_set(theme_cbep())
-
-library(LCensMeans)
 ```
 
 # Data Preparation
 ## Folder References
 ```{r folders}
-sibfldnm    <- 'Derived_Data'
+sibfldnm    <- 'Data'
 parent      <- dirname(getwd())
 sibling     <- file.path(parent,sibfldnm)
 
@@ -163,12 +134,12 @@ We remove 2019 data, as we don't have a complete year's worth of data, which may
 bias annual summaries.
 
 Note that this data does NOT include all of the predictors used in some models
-looking at chlorides. In particular, it does not include stream flow estimates 
+looking at chlorides. In particular, it does not include stream flow estimates.
 ```{r main_data}
 fn <- "Exceeds_Data.csv"
 exceeds = read_csv(file.path(sibling, fn), progress=FALSE) %>%
   mutate(IC=Site_IC_Data$CumPctIC[match(Site, Site_IC_Data$Site)]) %>%
-  select(-X1) %>%
+  select(-...1) %>%
   filter(Year < 2019) %>%
   mutate(Site = factor(Site, levels=levels(Site_IC_Data$Site))) %>%
   mutate(year_f = factor(Year),
@@ -258,53 +229,9 @@ exceeds <- exceeds %>%
 rm(depth_data)
 ```
 
-
 ## A Caution
 Site S06B only has chloride data from a single year, so including it in temporal
 models causes problems.  Consider removing the Site if problems arise.
-
-# How to Interpret Results?
-## Confirm Meaning of "TRUE" 
-In this data set a "TRUE" value consistently implies that water quality criteria
-were met or exceeded, whether that is achieved by a value higher than or lower
-than some numeric criteria.  "TRUE" implies good conditions.  "FALSE" implies 
-bad conditions.
-
-```{r confirm_TRUE}
-exceeds %>%
-  filter(! is.na(ClassCDO)) %>%
-  ggplot(aes(MaxT, fill = ClassCDO)) +
-  geom_histogram()
-```
-So `TRUE` is far more abundant than `FALSE`, and `FALSE` is most abundant at 
-higher temperatures.  This confirms that `TRUE` implies we pass water quality
-criteria.
-
-## Demo: How `rpart()` Handles / Displays TRUE/FALSE values?
-The following code creates a data frame where TRUE is closely associated
-with group A, and FALSE with group B.  The modifiers are just random noise.
-We want to look at how the tree is displayed
-```{r demo_tree, fig.width = 4, fig.height = 3}
-set.seed(12345)
-index <- sample(1:100, size = 20)
-
-df <- tibble(val = rep(c(TRUE, FALSE), each = 50),
-             group = rep(c("a", "b"), each = 50),
-             modifier = rep(c('A', 'B', 'C', 'D'), times = 25)) %>%
-  mutate(val = if_else(row_number() %in% index, ! val, val))
-  
-test_tree <-  rpart(val ~ group +  modifier, data = df)
-rpart.plot(test_tree)
-
-```
-
-*  The tree correctly splits, showing $Pr(TRUE)$ for `group == 'b'` (to left) is
-   smaller (at 0.24 ), while it is higher to the right for `group == 'a'`
-   (at 0.84).  
-*  The second split is random chance, but again the "Yes" value of the split
-   heads left (to LOWER $Pr(TRUE)$), while the "No" value pulls right.   
-*  The percentages shown are percentages of the SAMPLE at each node, and sum
-   to 100% for any complete partition of the sample.
 
 # Days that Pass DO Standards
 ```{r do_tree}
@@ -312,20 +239,19 @@ do_tree <- rpart(ClassCDO ~ Site + year_f + MaxT + FlowIndex,
                  data = exceeds)
 ```
 
-```{r}
+```{r do_cp_1}
 printcp(do_tree)
 ```
 
-If I'm reading that, these trees perform OK, with approximately  
-`r round(0.12769 * 0.65493,3) * 100` percent classification error. The cross
-validation error, however, does not flatten out, so there is little evidence
-of significant overfitting here, but from an interpretation perspective, the
-model is hart to summarize.
+These trees perform OK, with approximately `r round(0.12769 * 0.65493,3) * 100`
+percent classification error. The cross validation error, however, does not
+flatten out, so there is little evidence of significant overfitting here, but
+from an interpretation perspective, the model is hard to summarize.
 
-```{r}
+```{ do_cp_2}
 plotcp(do_tree)
 ```
-The relative error drops fairly linearly, so there is not great point to break
+The relative error drops fairly linearly, so there is no great point to break
 this tree as we prune.
 
 If we prune the tree just slightly, it becomes more readily interpreted.
@@ -333,6 +259,7 @@ If we prune the tree just slightly, it becomes more readily interpreted.
 do_tree_prune <- prune(do_tree, 0.0125)
 rpart.plot(do_tree_prune)
 ```
+
 Or, pruned more aggressively
 ```{r plot_do_tree_2, fig.width = 4, fig.height = 3}
 do_tree_prune_2 <- prune(do_tree, 0.0165)
@@ -358,10 +285,11 @@ weather.
 ## Frequency of Watershed Low Flow
 Overall, about one sixth of summer days qualify as "low flow" in the mid
 watershed, going by the cutoff derived from the model.
-```{r}
+```{r fraction_low_flow_S05}
 sum(exceeds$FlowIndex[exceeds$Site == 'S05'] < 0.096, na.rm = TRUE) /
   sum(! is.na(exceeds$FlowIndex[exceeds$Site == 'S05']))
 ```
+
 ```{r flow_histogram, fig.width = 5, fig.height = 4}
 exceeds %>%
   filter(Site =='S05') %>%
@@ -409,25 +337,24 @@ exceeds %>%
   ylab('Percent Days\nDepth < 10cm')
 ```
 
-
 # Complementary DO Model looking at local water depth
 ```{r do_depth_tree}
 do_depth <- rpart(ClassCDO ~ Site + year_f + MaxT + D_Median,
                  data = exceeds)
 ```
 
-```{r}
+```{r do_cp_3}
 printcp(do_depth)
 ```
 
 Performance is similar to the prior model, with if anything a slightly higher
 cross validation error, although with fewer steps evaluated.
 
-```{r}
+```{rdo_cp_4}
 plotcp(do_depth)
 ```
 
-Remember "True" means the site PASSES water quality criteria.  The 
+Remember "True" means the site PASSES water quality criteria.
 
 If we prune the tree just slightly, it becomes more readily interpreted.
 ```{r plot_do_depth, fig.width = 7, fig.height = 5}
@@ -448,7 +375,7 @@ psat_tree <- rpart(ClassC_PctSat ~ Site + year_f + MaxT + FlowIndex,
                  data = exceeds)
 ```
 
-```{r}
+```{r psat_cp_1}
 printcp(psat_tree)
 ```
 
@@ -457,12 +384,11 @@ on the order of `r round(0.18013 * 0.67474,3) * 100` percent classification
 error. The cross validation error, however, flattens out fast, so a slightly 
 simpler tree will perform nearly as well.
 
-```{r}
+```{r psat_cp_2}
 plotcp(psat_tree)
 ```
 
-
-Remember "True" means the site PASSES water quality criteria.  The 
+Remember "True" means the site PASSES water quality criteria.
 ```{r plot_psat_tree, fig.width = 6, fig.height = 5}
 rpart.plot(psat_tree)
 ```
@@ -471,7 +397,7 @@ Here the first cut is low flow conditions, corresponding roughly to flow
 below about one third of summer flow.  The next cuts split out
 especially bad years, and then our most at-risk sites.
 
-```{r}
+```{r low_flow_s05}
 sum(exceeds$FlowIndex[exceeds$Site == 'S05'] < 0.16, na.rm = TRUE) /
   sum(! is.na(exceeds$FlowIndex[exceeds$Site == 'S05']))
 ```
@@ -483,7 +409,7 @@ chl_tree <- rpart(ChlCCC ~ Site + year_f + MaxT + FlowIndex,
                  data = exceeds)
 ```
 
-```{r}
+```{r chl_cp_1}
 printcp(chl_tree)
 ```
 
@@ -492,11 +418,11 @@ These trees perform still less well....
 Classification error is on the order of `r round(0.23013 * 0.63002,3) * 100` 
 percent. Trimming may help, but not as much as for PctSat.
 
-```{r}
+```{r chl_cp_2}
 plotcp(chl_tree)
 ```
 
-Remember "True" means the site PASSES water quality criteria.  The 
+Remember "True" means the site PASSES water quality criteria.
 ```{r plot_chl_tree_CCC, fig.width = 9}
 rpart.plot(chl_tree)
 ```
@@ -511,7 +437,7 @@ chl_tree_2 <- rpart(ChlCMC ~ Site + year_f + MaxT + FlowIndex,
                  data = exceeds)
 ```
 
-```{r}
+```{r chl_cp_3}
 printcp(chl_tree_2)
 ```
 
@@ -519,21 +445,21 @@ These trees perform very well. Classification error is on the order of
 `r round(0.029921 * 0.80402,3) * 100` percent. There is little improvement
 in fit after the first three splits, so we prune the tree.
 
-```{r}
+```{r chl_cp_4}
 plotcp(chl_tree_2)
 ```
-```{r}
+
+```{r chl_prune}
 chl_tree_2 <- prune(chl_tree_2, 0.02)
 ```
 
-Remember "True" means the site PASSES water quality criteria.  The 
+Remember "True" means the site PASSES water quality criteria.
 ```{r plot_chl_tre_CMC, fig.width = 6}
 rpart.plot(chl_tree_2)
 ```
 This tree suggests violations of the more stringent chloride standards almost
 never happened, except at site S01, and they were relatively rare there except
 in our two worst years, under low flow conditions.
-
 
 # Days that Meet Temperature Thresholds
 ## Acute Temperature Thresholds
@@ -542,17 +468,17 @@ temp_tree <- rpart(MaxT_ex ~ Site + year_f + MaxT + FlowIndex,
                  data = exceeds)
 ```
 
-```{r}
+```{r temp_cp_1}
 printcp(temp_tree)
 ```
 
-Remember "True" means the site PASSES water quality criteria.  The 
+Remember "True" means the site PASSES water quality criteria.
 ```{r plot_temp_tree, fig.width = 4}
 rpart.plot(temp_tree)
 ```
 
 That's just too simple. What the tree tells us is that:  
-*  Violations of the Acute threshold are Exceptionally rare.  
+*  Violations of the Acute threshold are exceptionally rare.  
 *  Stream temperature extremes only happen on really hot days (with air
    temperature above 34.2 degrees C, or about 90 degrees F).  
 *  But even then, some years are worse than others.

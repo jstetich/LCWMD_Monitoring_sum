@@ -1,7 +1,7 @@
 Classificatin Tree Models of ‘Diurnal Exceedences’ on Long Creek
 ================
 Curtis C. Bohlen, Casco Bay Estuary Partnership.
-01/12/2021
+Updated 11/01/2021
 
 -   [Introduction](#introduction)
     -   [Are Water Quality Criteria
@@ -22,10 +22,6 @@ Curtis C. Bohlen, Casco Bay Estuary Partnership.
             2017](#single-s06b-chloride-observation-from-2017)
     -   [Add Stream Flow Index](#add-stream-flow-index)
     -   [A Caution](#a-caution)
--   [How to Interpret Results?](#how-to-interpret-results)
-    -   [Confirm Meaning of “TRUE”](#confirm-meaning-of-true)
-    -   [Demo: How `rpart()` Handles / Displays TRUE/FALSE
-        values?](#demo-how-rpart-handles-displays-truefalse-values)
 -   [Days that Pass DO Standards](#days-that-pass-do-standards)
     -   [Conclusions](#conclusions)
     -   [Frequency of Watershed Low
@@ -49,35 +45,6 @@ Curtis C. Bohlen, Casco Bay Estuary Partnership.
     style="position:absolute;top:10px;right:50px;" />
 
 # Introduction
-
-The Long Creek Watershed, almost three and a half square miles in area,
-is dominated by commercial land use. The Maine Mall is one of the
-largest land owners in the watershed, and it is surrounded by a range of
-commercial businesses, from medical offices, to car washes. About a
-third of the watershed in impervious surfaces like roads, parking lots,
-and rooftops.
-
-Landowners with an acre or more of impervious area are required to get a
-Clean Water Act permit for stormwater discharges from their property.
-The LCWMD provides an alternative for landowners to working to receive
-an individual permit. Landowners who elect to participate in the The
-Long Creek Watershed Management District receive a General Permit, in
-return for providing funding to the District, and facilitating the work
-of the district by permitting access to their property for certain
-activities.
-
-For more information on LCWMD, see [their web
-site](restorelongcreek.org).
-
-Over the past decade, LCWMD has contracted with several consulting firms
-to provide water quality monitoring services along Long Creek. This has
-produced one of the most extensive and best documented data set from the
-Northeastern US looking at water quality conditions in an urban stream.
-
-GZA Geoenvironmental Incorporated (GZA) has been the primary monitoring
-contractor for LCWMD for several years, and in 2019, they conducted a
-thorough review of LCWMD data. These analyses are based on their summary
-data sets, and recapitulate and extend their analyses.
 
 ## Are Water Quality Criteria Met?
 
@@ -154,14 +121,20 @@ metrics.
 ``` r
 library(rpart)
 library(rpart.plot)
-#library(randomForest)  # random forest models provide little explanatory power.
-
+#> Warning: package 'rpart.plot' was built under R version 4.0.5
 library(tidyverse)
-#> -- Attaching packages --------------------------------------- tidyverse 1.3.0 --
-#> v ggplot2 3.3.3     v purrr   0.3.4
-#> v tibble  3.0.5     v dplyr   1.0.3
-#> v tidyr   1.1.2     v stringr 1.4.0
-#> v readr   1.4.0     v forcats 0.5.0
+#> Warning: package 'tidyverse' was built under R version 4.0.5
+#> -- Attaching packages --------------------------------------- tidyverse 1.3.1 --
+#> v ggplot2 3.3.5     v purrr   0.3.4
+#> v tibble  3.1.4     v dplyr   1.0.7
+#> v tidyr   1.1.3     v stringr 1.4.0
+#> v readr   2.0.1     v forcats 0.5.1
+#> Warning: package 'ggplot2' was built under R version 4.0.5
+#> Warning: package 'tibble' was built under R version 4.0.5
+#> Warning: package 'tidyr' was built under R version 4.0.5
+#> Warning: package 'readr' was built under R version 4.0.5
+#> Warning: package 'dplyr' was built under R version 4.0.5
+#> Warning: package 'forcats' was built under R version 4.0.5
 #> -- Conflicts ------------------------------------------ tidyverse_conflicts() --
 #> x dplyr::filter() masks stats::filter()
 #> x dplyr::lag()    masks stats::lag()
@@ -170,8 +143,6 @@ library(readr)
 library(CBEPgraphics)
 load_cbep_fonts()
 theme_set(theme_cbep())
-
-library(LCensMeans)
 ```
 
 # Data Preparation
@@ -179,7 +150,7 @@ library(LCensMeans)
 ## Folder References
 
 ``` r
-sibfldnm    <- 'Derived_Data'
+sibfldnm    <- 'Data'
 parent      <- dirname(getwd())
 sibling     <- file.path(parent,sibfldnm)
 
@@ -204,19 +175,14 @@ fpath <- file.path(sibling, fn)
 
 Site_IC_Data <- read_csv(fpath) %>%
   filter(Site != "--") 
-#> 
+#> Rows: 7 Columns: 8
 #> -- Column specification --------------------------------------------------------
-#> cols(
-#>   Site = col_character(),
-#>   Subwatershed = col_character(),
-#>   Area_ac = col_double(),
-#>   IC_ac = col_double(),
-#>   CumArea_ac = col_double(),
-#>   CumIC_ac = col_double(),
-#>   PctIC = col_character(),
-#>   CumPctIC = col_character()
-#> )
-
+#> Delimiter: ","
+#> chr (4): Site, Subwatershed, PctIC, CumPctIC
+#> dbl (4): Area_ac, IC_ac, CumArea_ac, CumIC_ac
+#> 
+#> i Use `spec()` to retrieve the full column specification for this data.
+#> i Specify the column types or set `show_col_types = FALSE` to quiet this message.
 # Now, create a factor that preserves the order of rows (roughly upstream to downstream). 
 Site_IC_Data <- Site_IC_Data %>%
   mutate(Site = factor(Site, levels = Site_IC_Data$Site))
@@ -244,13 +210,13 @@ which may bias annual summaries.
 
 Note that this data does NOT include all of the predictors used in some
 models looking at chlorides. In particular, it does not include stream
-flow estimates
+flow estimates.
 
 ``` r
 fn <- "Exceeds_Data.csv"
 exceeds = read_csv(file.path(sibling, fn), progress=FALSE) %>%
   mutate(IC=Site_IC_Data$CumPctIC[match(Site, Site_IC_Data$Site)]) %>%
-  select(-X1) %>%
+  select(-...1) %>%
   filter(Year < 2019) %>%
   mutate(Site = factor(Site, levels=levels(Site_IC_Data$Site))) %>%
   mutate(year_f = factor(Year),
@@ -261,30 +227,18 @@ exceeds = read_csv(file.path(sibling, fn), progress=FALSE) %>%
          season = factor(season, levels = c('Winter', 'Spring', 
                                            'Summer', 'Fall'))) %>%
   mutate(lPrecip = log1p(Precip))
-#> Warning: Missing column names filled in: 'X1' [1]
-#> 
+#> New names:
+#> * `` -> ...1
+#> Rows: 11422 Columns: 19
 #> -- Column specification --------------------------------------------------------
-#> cols(
-#>   X1 = col_double(),
-#>   sdate = col_date(format = ""),
-#>   Site = col_character(),
-#>   Year = col_double(),
-#>   Month = col_double(),
-#>   Precip = col_double(),
-#>   PPrecip = col_double(),
-#>   MaxT = col_double(),
-#>   D_Median = col_double(),
-#>   ClassCDO = col_logical(),
-#>   ClassBDO = col_logical(),
-#>   ClassC_PctSat = col_logical(),
-#>   ClassB_PctSat = col_logical(),
-#>   ClassCBoth = col_logical(),
-#>   ClassBBoth = col_logical(),
-#>   ChlCCC = col_logical(),
-#>   ChlCMC = col_logical(),
-#>   MaxT_ex = col_logical(),
-#>   AvgT_ex = col_logical()
-#> )
+#> Delimiter: ","
+#> chr   (1): Site
+#> dbl   (7): ...1, Year, Month, Precip, PPrecip, MaxT, D_Median
+#> lgl  (10): ClassCDO, ClassBDO, ClassC_PctSat, ClassB_PctSat, ClassCBoth, Cla...
+#> date  (1): sdate
+#> 
+#> i Use `spec()` to retrieve the full column specification for this data.
+#> i Specify the column types or set `show_col_types = FALSE` to quiet this message.
 ```
 
 ## Data Corrections
@@ -390,59 +344,6 @@ Site S06B only has chloride data from a single year, so including it in
 temporal models causes problems. Consider removing the Site if problems
 arise.
 
-# How to Interpret Results?
-
-## Confirm Meaning of “TRUE”
-
-In this data set a “TRUE” value consistently implies that water quality
-criteria were met or exceeded, whether that is achieved by a value
-higher than or lower than some numeric criteria. “TRUE” implies good
-conditions. “FALSE” implies bad conditions.
-
-``` r
-exceeds %>%
-  filter(! is.na(ClassCDO)) %>%
-  ggplot(aes(MaxT, fill = ClassCDO)) +
-  geom_histogram()
-#> `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
-#> Warning: Removed 3 rows containing non-finite values (stat_bin).
-```
-
-<img src="rpart_models_files/figure-gfm/confirm_TRUE-1.png" style="display: block; margin: auto;" />
-So `TRUE` is far more abundant than `FALSE`, and `FALSE` is most
-abundant at higher temperatures. This confirms that `TRUE` implies we
-pass water quality criteria.
-
-## Demo: How `rpart()` Handles / Displays TRUE/FALSE values?
-
-The following code creates a data frame where TRUE is closely associated
-with group A, and FALSE with group B. The modifiers are just random
-noise. We want to look at how the tree is displayed
-
-``` r
-set.seed(12345)
-index <- sample(1:100, size = 20)
-
-df <- tibble(val = rep(c(TRUE, FALSE), each = 50),
-             group = rep(c("a", "b"), each = 50),
-             modifier = rep(c('A', 'B', 'C', 'D'), times = 25)) %>%
-  mutate(val = if_else(row_number() %in% index, ! val, val))
-  
-test_tree <-  rpart(val ~ group +  modifier, data = df)
-rpart.plot(test_tree)
-```
-
-<img src="rpart_models_files/figure-gfm/demo_tree-1.png" style="display: block; margin: auto;" />
-
--   The tree correctly splits, showing *P**r*(*T**R**U**E*) for
-    `group == 'b'` (to left) is smaller (at 0.24 ), while it is higher
-    to the right for `group == 'a'` (at 0.84).  
--   The second split is random chance, but again the “Yes” value of the
-    split heads left (to LOWER *P**r*(*T**R**U**E*)), while the “No”
-    value pulls right.  
--   The percentages shown are percentages of the SAMPLE at each node,
-    and sum to 100% for any complete partition of the sample.
-
 # Days that Pass DO Standards
 
 ``` r
@@ -465,31 +366,25 @@ printcp(do_tree)
 #> n=8624 (2354 observations deleted due to missingness)
 #> 
 #>          CP nsplit rel error  xerror     xstd
-#> 1  0.089504      0   1.00000 1.00024 0.021082
-#> 2  0.084329      1   0.91050 0.91725 0.019390
-#> 3  0.024114      2   0.82617 0.82701 0.019298
-#> 4  0.022351      3   0.80205 0.80902 0.019414
-#> 5  0.014269      5   0.75735 0.75930 0.018718
-#> 6  0.013428      7   0.72881 0.74438 0.018760
-#> 7  0.012959      9   0.70196 0.72108 0.018417
-#> 8  0.010738     11   0.67604 0.69509 0.018212
-#> 9  0.010369     12   0.66530 0.68543 0.018302
-#> 10 0.010000     13   0.65493 0.68160 0.018305
+#> 1  0.089504      0   1.00000 1.00032 0.021084
+#> 2  0.084329      1   0.91050 0.92004 0.019396
+#> 3  0.024114      2   0.82617 0.82736 0.019295
+#> 4  0.022351      3   0.80205 0.80561 0.019300
+#> 5  0.014269      5   0.75735 0.76236 0.018756
+#> 6  0.013428      7   0.72881 0.74414 0.018783
+#> 7  0.012959      9   0.70196 0.72345 0.018571
+#> 8  0.010738     11   0.67604 0.69308 0.018273
+#> 9  0.010369     12   0.66530 0.68272 0.018355
+#> 10 0.010000     13   0.65493 0.67744 0.018373
 ```
 
-If I’m reading that, these trees perform OK, with approximately  
-8.4 percent classification error. The cross validation error, however,
-does not flatten out, so there is little evidence of significant
-overfitting here, but from an interpretation perspective, the model is
-hart to summarize.
+These trees perform OK, with approximately 8.4 percent classification
+error. The cross validation error, however, does not flatten out, so
+there is little evidence of significant overfitting here, but from an
+interpretation perspective, the model is hard to summarize.
 
-``` r
-plotcp(do_tree)
-```
-
-<img src="rpart_models_files/figure-gfm/unnamed-chunk-2-1.png" style="display: block; margin: auto;" />
-The relative error drops fairly linearly, so there is not great point to
-break this tree as we prune.
+`{ do_cp_2} plotcp(do_tree)` The relative error drops fairly linearly,
+so there is no great point to break this tree as we prune.
 
 If we prune the tree just slightly, it becomes more readily interpreted.
 
@@ -499,6 +394,7 @@ rpart.plot(do_tree_prune)
 ```
 
 <img src="rpart_models_files/figure-gfm/plot_do_tree_1-1.png" style="display: block; margin: auto;" />
+
 Or, pruned more aggressively
 
 ``` r
@@ -622,26 +518,24 @@ printcp(do_depth)
 #> n=8624 (2354 observations deleted due to missingness)
 #> 
 #>         CP nsplit rel error  xerror     xstd
-#> 1 0.089504      0   1.00000 1.00050 0.021087
-#> 2 0.084329      1   0.91050 0.91836 0.019417
-#> 3 0.042665      2   0.82617 0.82716 0.019297
-#> 4 0.029920      3   0.78350 0.79231 0.019924
-#> 5 0.025702      4   0.75358 0.76303 0.018835
-#> 6 0.011533      5   0.72788 0.73774 0.018633
-#> 7 0.011377      6   0.71635 0.72779 0.018758
-#> 8 0.010000      7   0.70497 0.71837 0.018802
+#> 1 0.089504      0   1.00000 1.00011 0.021079
+#> 2 0.084329      1   0.91050 0.93614 0.019648
+#> 3 0.042665      2   0.82617 0.85414 0.019515
+#> 4 0.029920      3   0.78350 0.81339 0.020083
+#> 5 0.025702      4   0.75358 0.77149 0.018926
+#> 6 0.011533      5   0.72788 0.74238 0.018691
+#> 7 0.011377      6   0.71635 0.73535 0.018796
+#> 8 0.010000      7   0.70497 0.73089 0.018811
 ```
 
 Performance is similar to the prior model, with if anything a slightly
 higher cross validation error, although with fewer steps evaluated.
 
-``` r
+``` rdo_cp_4
 plotcp(do_depth)
 ```
 
-<img src="rpart_models_files/figure-gfm/unnamed-chunk-5-1.png" style="display: block; margin: auto;" />
-
-Remember “True” means the site PASSES water quality criteria. The
+Remember “True” means the site PASSES water quality criteria.
 
 If we prune the tree just slightly, it becomes more readily interpreted.
 
@@ -681,14 +575,14 @@ printcp(psat_tree)
 #> n=8143 (2835 observations deleted due to missingness)
 #> 
 #>         CP nsplit rel error  xerror     xstd
-#> 1 0.117287      0   1.00000 1.00032 0.013809
-#> 2 0.108776      1   0.88271 0.86447 0.013311
-#> 3 0.045622      2   0.77394 0.77653 0.014291
-#> 4 0.029404      3   0.72831 0.73024 0.014819
-#> 5 0.016645      4   0.69891 0.70066 0.014134
-#> 6 0.016496      5   0.68227 0.68977 0.014160
-#> 7 0.011298      6   0.66577 0.67512 0.014043
-#> 8 0.010000      7   0.65447 0.67310 0.014062
+#> 1 0.117287      0   1.00000 1.00007 0.013805
+#> 2 0.108776      1   0.88271 0.88138 0.013185
+#> 3 0.045622      2   0.77394 0.77779 0.014317
+#> 4 0.029404      3   0.72831 0.73263 0.014854
+#> 5 0.016645      4   0.69891 0.70722 0.014262
+#> 6 0.016496      5   0.68227 0.69334 0.014190
+#> 7 0.011298      6   0.66577 0.67518 0.014032
+#> 8 0.010000      7   0.65447 0.67208 0.014059
 ```
 
 These trees perform not quite as well as the DO trees. Classification
@@ -700,9 +594,9 @@ will perform nearly as well.
 plotcp(psat_tree)
 ```
 
-<img src="rpart_models_files/figure-gfm/unnamed-chunk-7-1.png" style="display: block; margin: auto;" />
+<img src="rpart_models_files/figure-gfm/psat_cp_2-1.png" style="display: block; margin: auto;" />
 
-Remember “True” means the site PASSES water quality criteria. The
+Remember “True” means the site PASSES water quality criteria.
 
 ``` r
 rpart.plot(psat_tree)
@@ -743,14 +637,14 @@ printcp(chl_tree)
 #> n=8648 (2330 observations deleted due to missingness)
 #> 
 #>         CP nsplit rel error  xerror      xstd
-#> 1 0.191702      0   1.00000 1.00037 0.0063223
-#> 2 0.077182      1   0.80830 0.80881 0.0096007
-#> 3 0.021631      2   0.73112 0.73769 0.0107978
-#> 4 0.021613      4   0.68785 0.71536 0.0106653
-#> 5 0.019226      5   0.66624 0.68003 0.0104267
-#> 6 0.014972      6   0.64701 0.65935 0.0101074
-#> 7 0.010589      7   0.63204 0.63912 0.0101307
-#> 8 0.010000      8   0.62145 0.62614 0.0102515
+#> 1 0.191702      0   1.00000 1.00023 0.0063212
+#> 2 0.077182      1   0.80830 0.80854 0.0095978
+#> 3 0.021631      2   0.73112 0.73695 0.0108044
+#> 4 0.021613      4   0.68785 0.70124 0.0104663
+#> 5 0.019226      5   0.66624 0.68120 0.0103552
+#> 6 0.014972      6   0.64701 0.65686 0.0101197
+#> 7 0.010589      7   0.63204 0.64612 0.0101599
+#> 8 0.010000      8   0.62145 0.62846 0.0102525
 ```
 
 These trees perform still less well….
@@ -762,9 +656,9 @@ but not as much as for PctSat.
 plotcp(chl_tree)
 ```
 
-<img src="rpart_models_files/figure-gfm/unnamed-chunk-10-1.png" style="display: block; margin: auto;" />
+<img src="rpart_models_files/figure-gfm/chl_cp_2-1.png" style="display: block; margin: auto;" />
 
-Remember “True” means the site PASSES water quality criteria. The
+Remember “True” means the site PASSES water quality criteria.
 
 ``` r
 rpart.plot(chl_tree)
@@ -797,15 +691,15 @@ printcp(chl_tree_2)
 #> n=8648 (2330 observations deleted due to missingness)
 #> 
 #>         CP nsplit rel error  xerror     xstd
-#> 1 0.055124      0   1.00000 1.00014 0.058336
-#> 2 0.025619      2   0.88975 0.89362 0.049071
-#> 3 0.019038      5   0.81289 0.83246 0.049092
-#> 4 0.016235      6   0.79386 0.81682 0.047100
-#> 5 0.014514      7   0.77762 0.82550 0.047432
-#> 6 0.014287      8   0.76311 0.82569 0.047408
-#> 7 0.011952      9   0.74882 0.81638 0.046835
-#> 8 0.010856     11   0.72492 0.80422 0.046320
-#> 9 0.010000     12   0.71406 0.79988 0.046132
+#> 1 0.055124      0   1.00000 1.00024 0.058341
+#> 2 0.025619      2   0.88975 0.89248 0.049007
+#> 3 0.019038      5   0.81289 0.82835 0.048966
+#> 4 0.016235      6   0.79386 0.81546 0.047516
+#> 5 0.014514      7   0.77762 0.80751 0.046999
+#> 6 0.014287      8   0.76311 0.80880 0.046591
+#> 7 0.011952      9   0.74882 0.80052 0.046365
+#> 8 0.010856     11   0.72492 0.79810 0.045834
+#> 9 0.010000     12   0.71406 0.79037 0.045629
 ```
 
 These trees perform very well. Classification error is on the order of
@@ -816,13 +710,13 @@ splits, so we prune the tree.
 plotcp(chl_tree_2)
 ```
 
-<img src="rpart_models_files/figure-gfm/unnamed-chunk-12-1.png" style="display: block; margin: auto;" />
+<img src="rpart_models_files/figure-gfm/chl_cp_4-1.png" style="display: block; margin: auto;" />
 
 ``` r
 chl_tree_2 <- prune(chl_tree_2, 0.02)
 ```
 
-Remember “True” means the site PASSES water quality criteria. The
+Remember “True” means the site PASSES water quality criteria.
 
 ``` r
 rpart.plot(chl_tree_2)
@@ -856,11 +750,11 @@ printcp(temp_tree)
 #> n=10900 (78 observations deleted due to missingness)
 #> 
 #>         CP nsplit rel error xerror    xstd
-#> 1 0.026263      0   1.00000 1.0001 0.24200
-#> 2 0.010000      2   0.94747 1.0067 0.24217
+#> 1 0.026263      0   1.00000 1.0002 0.24202
+#> 2 0.010000      2   0.94747 1.0529 0.24292
 ```
 
-Remember “True” means the site PASSES water quality criteria. The
+Remember “True” means the site PASSES water quality criteria.
 
 ``` r
 rpart.plot(temp_tree)
@@ -869,7 +763,7 @@ rpart.plot(temp_tree)
 <img src="rpart_models_files/figure-gfm/plot_temp_tree-1.png" style="display: block; margin: auto;" />
 
 That’s just too simple. What the tree tells us is that:  
-\* Violations of the Acute threshold are Exceptionally rare.  
+\* Violations of the Acute threshold are exceptionally rare.  
 \* Stream temperature extremes only happen on really hot days (with air
 temperature above 34.2 degrees C, or about 90 degrees F).  
 \* But even then, some years are worse than others.
