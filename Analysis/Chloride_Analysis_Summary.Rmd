@@ -79,9 +79,7 @@ library(tidyverse)
 library(readr)
 
 library(emmeans) # Provides tools for calculating marginal means
-library(nlme)
-
-#library(zoo)     # here, for the `rollapply()` function
+#library(nlme)
 
 library(mgcv)    # generalized additive models. Function gamm() allows
                  # autocorrelation.
@@ -94,37 +92,12 @@ theme_set(theme_cbep())
 # Data Preparation
 ## Initial Folder References
 ```{r}
-sibfldnm    <- 'Original_Data'
+sibfldnm    <- 'Data'
 parent      <- dirname(getwd())
 sibling     <- file.path(parent,sibfldnm)
 
 dir.create(file.path(getwd(), 'figures'), showWarnings = FALSE)
 dir.create(file.path(getwd(), 'models'), showWarnings = FALSE)
-```
-
-## Load Weather Data
-```{r load_weather_data}
-fn <- "Portland_Jetport_2009-2019.csv"
-fpath <- file.path(sibling, fn)
-
-weather_data <- read_csv(fpath, 
- col_types = cols(.default = col_skip(),
-        date = col_date(),
-        PRCP = col_number(), PRCPattr = col_character() #,
-        #SNOW = col_number(), SNOWattr = col_character(), 
-        #TMIN = col_number(), TMINattr = col_character(), 
-        #TAVG = col_number(), TAVGattr = col_character(), 
-        #TMAX = col_number(), TMAXattr = col_character(), 
-        )) %>%
-  rename(sdate = date) %>%
-  mutate(pPRCP = dplyr::lag(PRCP))
-```
-
-## Update Folder References
-```{r}
-sibfldnm    <- 'Derived_Data'
-parent      <- dirname(getwd())
-sibling     <- file.path(parent,sibfldnm)
 ```
 
 ## Load Data on Sites and Impervious Cover
@@ -175,17 +148,10 @@ full_data <- read_csv(fpath,
         D_Median = col_double(), Precip = col_number(), 
         X1 = col_skip(), Year = col_integer(), 
         FlowIndex = col_double())) %>%
-
   mutate(Site = factor(Site, levels=levels(Site_IC_Data$Site))) %>%
   mutate(Month = factor(Month, levels = month.abb)) %>%
   mutate(IC=as.numeric(Site_IC_Data$CumPctIC[match(Site, Site_IC_Data$Site)])) %>%
-  mutate(Yearf = factor(Year)) %>%
-
-# We combine data using "match" because we have data for multiple sites and 
-# therefore dates are not unique.  `match()` correctly assigns weather
-# data by date.
-mutate(PPrecip = weather_data$pPRCP[match(sdate, weather_data$sdate)])
-
+  mutate(Yearf = factor(Year))
 ```
 
 ### Cleanup

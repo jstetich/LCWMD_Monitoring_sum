@@ -52,7 +52,7 @@ review, critique, learn from, and build upon CBEP science.
 CBEP 2020/2021 State of the Bay data analysis summaries contain a selection of 
 data,  data analysis code, and visualization code as used to produce 
 results shared via our most recent State of Casco Bay report. Usually, these
-archives are organized int otwo or three folders, including the following:
+archives are organized into two or three folders, including the following:
 
 - `Data`  folder.  Contains data in simplified or derived form as used in our
 data  analysis.  Associated metadata is contained in related Markdown documents,

@@ -1,7 +1,7 @@
 ---
 title: "Summary of Analysis of LCWMD Dissolved Oxygen Data"
 author: "Curtis C. Bohlen, Casco Bay Estuary Partnership."
-date: "01/06/2021"
+date: "Revised 11/02/2021"
 output:
   github_document:
     toc: true
@@ -18,106 +18,13 @@ knitr::opts_chunk$set(fig.align = 'center',
                       collapse = TRUE, comment = "#>")
 ```
 
-# Introduction
-The Long Creek Watershed, almost three and a half square miles in area, is
-dominated by commercial land use. The Maine Mall is one of the largest land
-owners in the watershed, and it is surrounded by a range of commercial
-businesses, from medical offices, to car washes.  About a third of the watershed
-in impervious surfaces like roads, parking lots, and rooftops.
-
-Landowners with an acre or more of impervious area are required to get a Clean
-Water Act permit for stormwater discharges from their property.  The LCWMD
-provides an alternative for landowners to working to receive an individual
-permit. Landowners who elect to participate in the The Long Creek Watershed
-Management District receive a General Permit, in return for providing funding to
-the District, and facilitating the work of the district by permitting access to
-their property for certain activities.
-
-For more information on LCWMD, see [their web site](restorelongcreek.org).
-
-Over the past decade, LCWMD has contracted with several consulting firms to
-provide  water quality monitoring services along Long Creek.  This has produced
-one of the most extensive and best documented data set from the Northeastern US 
-looking at water quality conditions in an urban stream.
-
-GZA Geoenvironmental Incorporated (GZA) has been the primary monitoring
-contractor for LCWMD in recent years, and in 2019, they conducted a thorough
-review of LCWMD data. These analyses are based on their summary data sets, and
-recapitulate and extend their analyses.
-
-## Are Water Quality Criteria Met?
-The primary question we ask in this Notebook, is whether water quality criteria 
-pertaining to levels of dissolved oxygen are met. In poarticular, we explore
-various ways of modelling those probabilities, and settle on modelling only 
-summertime probabilities as the most informative for State of Casco Bay readers.
-
-We ask whether the probability of failing to meet criteria each day is
-changing.  Secondarily, we examine differences among sites in the probability of
-failing criteria.
-
-In this data set a "TRUE" value consistently implies that water quality criteria
-were met or exceeded, whether that is achieved by a value higher than or lower
-than some numeric criteria.  "TRUE" implies good conditions.  "FALSE" implies 
-bad conditions.
-    
-## Sources of Threshold Values  
-### Dissolved oxygen
-Maine’s Class B water quality standards call for dissolved oxygen above 7 mg/l,
-with percent saturation above 75%. The Class C Standards, which apply to almost
-all of Long Creek, call for dissolved oxygen above 5 mg/l, with percent
-saturation above 60%. In addition, for class C conditions, the thirty day
-average dissolved oxygen muststay above 6.5 mg/l.
-
-### Chloride
-Maine uses established thresholds for both chronic and acute exposure to
-chloride. These are the “CCC and CMC” standards for chloride in freshwater.
-(06-096 CMR 584). These terms are defined in a footnote as follows:
-
->   The Criteria Maximum Concentration (CMC) is an estimate of the highest
-    concentration of a material in surface water to which an aquatic community
-    can be exposed briefly without resulting in an unacceptable effect. The
-    Criterion Continuous Concentration (CCC) is an estimate of the highest
-    concentration of a material in surface water to which an aquatic community
-    can be exposed indefinitely without resulting in an unacceptable effect.
-
-The relevant thresholds are:
-
-*   Chloride CCC  = 230  mg/l
-*   Chloride CMC  = 860  mg/l
-
-In practice, chloride in Long Creek are indirectly estimated based on 
-measurement of conductivity.  The chloride-conductivity correlations is fairly
-close and robust, but estimation is an additional source of error, although 
-generally on the level of 10% or less.
-
-### Temperature
-There are no legally binding Maine criteria for maximum stream temperature, but
-we can back into thresholds based on research on thermal tolerance of brook
-trout in streams. A study from Michigan and Wisconsin, showed that trout are
-found in streams with daily mean water temperatures as high as 25.3°C, but only
-if the period of exceedence of that daily average temperature is short – only
-one day. Similarly, the one day daily maximum temperature above which trout were
-never found was 27.6°C. That generates two temperature criteria, one for daily
-averages, and one for daily maximums. 
-
-These criteria should be taken as rough values only, as the  original study was
-observational, and thus the key driver of suitability for trout could be
-another stressor correlated with these temperature metrics.
-
->  Wehrly, Kevin E.; Wang, Lizhu; Mitro, Matthew (2007). “Field‐Based Estimates
-   of Thermal Tolerance Limits for Trout: Incorporating Exposure Time and
-   Temperature Fluctuation.” Transactions of the American Fisheries Society
-   136(2):365-374.
-
 # Import Libraries  
-```{r}
+```{r libraries}
 library(tidyverse)
 library(readr)
 
 library(emmeans) # Provides tools for calculating marginal means
-library(nlme)
-
-#library(zoo)     # here, for the `rollapply()` function
+#library(nlme)
 
 library(mgcv)    # generalized additive models. Function gamm() allows
                  # autocorrelation.
@@ -129,12 +36,11 @@ theme_set(theme_cbep())
 
 # Data Preparation
 ## Initial Folder References
-```{r}
-sibfldnm    <- 'Original_Data'
+```{r folders}
+sibfldnm    <- 'Data'
 parent      <- dirname(getwd())
 sibling     <- file.path(parent,sibfldnm)
 
-dir.create(file.path(getwd(), 'figures'), showWarnings = FALSE)
 dir.create(file.path(getwd(), 'models'), showWarnings = FALSE)
 ```
 
@@ -156,13 +62,6 @@ weather_data <- read_csv(fpath,
   mutate(pPRCP = dplyr::lag(PRCP))
 ```
 
-## Update Folder References
-```{r}
-sibfldnm    <- 'Derived_Data'
-parent      <- dirname(getwd())
-sibling     <- file.path(parent,sibfldnm)
-```
-
 ## Load Data on Sites and Impervious Cover
 These data were derived from Table 2 from a GZA report to the Long Creek
 Watershed Management District, titled "Re: Long Creek Watershed Data Analysis;
@@ -172,7 +71,7 @@ November 13, 2019 File No. 09.0025977.02.
 Cumulative Area and IC calculations are our own, based on the GZA data and the
 geometry of the stream channel.
 
-```{r}
+```{r ic_data}
 # Read in data and drop the East Branch, where we have no data
 fn <- "Site_IC_Data.csv"
 fpath <- file.path(sibling, fn)
@@ -194,15 +93,11 @@ Site_IC_Data
 ## Load Main Data
 Read in the data from the Derived Data folder.
 
-Note that I filter out data from 2019 because that is only a partial year, which might affect estimation of things like seasonal trends.  We could add it back in, but with care....
+Note that we filter out data from 2019 because that is only a partial year,
+which might affect estimation of things like seasonal trends.  We could add it
+back in, but with care....
 
-*Full_Data.csv* does not include a field for precipitation from the
-previous day.  In earlier work, we learned that a weighted sum of recent
-precipitation provided better explanatory power.  But we also want to check
-a simpler model, so we construct a "PPrecip" data field.  This is based
-on a modification of code in the "Make_Daily_Summaries.Rmd" notebook.
-
-```{r}
+```{r main_data}
 fn <- "Full_Data.csv"
 fpath <- file.path(sibling, fn)
 
@@ -210,21 +105,14 @@ full_data <- read_csv(fpath,
     col_types = cols(DOY = col_integer(), 
         D_Median = col_double(), Precip = col_number(), 
         X1 = col_skip(), Year = col_integer())) %>%
-
   mutate(Site = factor(Site, levels=levels(Site_IC_Data$Site)),
          Month = factor(Month, levels = month.abb),
          Year_f = factor(Year),
-         IC=as.numeric(Site_IC_Data$CumPctIC[match(Site, Site_IC_Data$Site)])) %>%
-
-# We combine data using "match" because we have data for multiple sites and 
-# therefore dates are not unique.  `match()` correctly assigns weather
-# data by date.
-  mutate(PPrecip = weather_data$pPRCP[match(sdate, weather_data$sdate)])
-
+         IC=as.numeric(Site_IC_Data$CumPctIC[match(Site, Site_IC_Data$Site)]))
 ```
 
 ### Cleanup
-```{r}
+```{r cleanup}
 rm(Site_IC_Data, weather_data)
 rm(fn, fpath, parent, sibling, sibfldnm)
 ```
@@ -248,7 +136,7 @@ transducer appears likely.
 We remove these extreme values.  The other daily medians in May and June of 2015
 appear reasonable, and we leave them in place, although given possible 
 instability of the pressure sensors, it might make sense to remove them all.
-```{r}
+```{r depth_data_cleanup}
 full_data <- full_data %>%
   mutate(D_Median = if_else(D_Median > 4, NA_real_, D_Median),
          lD_Median = if_else(D_Median > 4, NA_real_, lD_Median))
@@ -259,7 +147,7 @@ The data includes just a single chloride observation from site S06B from
 any year other than 2013.  While we do not know if the data point is legitimate
 or not, it has very high leverage in several models, and we suspect a 
 transcription error of some sort.
-```{r fig.width = 3, fig.height = 2}
+```{rshow_bad_obs, fig.width = 3, fig.height = 2}
 full_data %>%
   filter(Site == 'S06B') %>%
   select(sdate, DO_Median) %>%
@@ -267,7 +155,7 @@ full_data %>%
 ```
 
 We remove the Chloride value from the data.
-```{r}
+```{r fix_bad_obs}
 full_data <- full_data %>%
   mutate(Chl_Median = if_else(Site == 'S06B' & Year > 2014,
                               NA_real_, Chl_Median))
@@ -277,7 +165,7 @@ full_data <- full_data %>%
 #### Site S03, end of 2016
 We noted some extreme dissolved oxygen data at the end of 2016.  Values were
 both extreme and highly variable.
-```{r}
+```{r show_bad_do_chl_data}
 full_data %>% 
   filter (Year == 2016, Site == 'S03', Month %in% c("Oct", "Nov", "Dec")) %>%
 ggplot(aes(x = sdate)) + 
@@ -297,7 +185,9 @@ ggplot(aes(x = sdate)) +
            label = 'Chlorides / 20', color = 'green')
 ```
 
-The unstable behavior after October 23rd is questionable.  DO does not normally fluctuate so widely. Percent saturation associated with these observations extend as high as 200%.  There is clearly a problem.
+The unstable behavior after October 23rd is questionable.  DO does not normally
+fluctuate so widely. Percent saturation associated with these observations
+extend as high as 200%.  There is clearly a problem.
 
 We looked at the raw data, and examined the time course of all sonde-related data.
 
@@ -327,7 +217,7 @@ November of 2015 as well, but the raw data is smoother, without the extreme high
 values, and without zero DO observations.  We leave those data in place as 
 likely correct.
 
-```{r}
+```{r fix_bad_do_chl_data}
 full_data <- full_data %>% 
   mutate(Chl_Median = if_else(Year == 2016 & Site == 'S03' & DOY > 288,
                               NA_real_, Chl_Median),
@@ -379,7 +269,7 @@ our general stream flow indicator.
 Stream flow at S05 is correlated with flow at other sites, although not all that
 closely correlated to flow in the downstream tributaries.
 
-```{r}
+```{r flow_correlations}
 full_data %>%
   select(sdate, Site, lD_Median) %>%
   pivot_wider(names_from = Site, values_from = lD_Median) %>%
@@ -392,7 +282,7 @@ stream flow indicator, which we call `FlowIndex`.  We use the log of the raw
 median, to lessen the effect of the highly skewed distribution of stream depths
 on the metric.
 
-```{r}
+```{r make_flow_index}
 depth_data <- full_data %>%
   filter (Site == 'S05') %>%
   select(sdate, lD_Median)
@@ -406,132 +296,16 @@ Note that because the flow record at S05 has some gaps, any model using this
 predictor is likely to have a smaller sample size.
 
 ## Select Final Data Set
-```{r}
+```{r final_data}
 full_data <- full_data %>%
   mutate(Year_f = factor(Year)) %>%
   select (Site, sdate, Year, Year_f, Month, DOY, 
-          Precip, lPrecip, PPrecip, wlPrecip, MaxT,
+          Precip, lPrecip, wlPrecip, MaxT,
           D_Median, lD_Median,
           DO_Median, PctSat_Median, T_Median, Chl_Median,
           IC, FlowIndex) %>%
   filter(! is.na(DO_Median))
 ```
-
-# Crosstabs
-```{r}
-xtabs(~ Site + Year, data = full_data)
-```
-
-Note that Site S05 and S17 have partially complementary data histories on
-dissolved oxygen.
-
-```{r}
-xtabs(~ Month + Year + Site, data = full_data)
-```
-
-# Exploratory Graphics
-```{r}
-ggplot(full_data, aes(x = DO_Median)) + geom_histogram(aes(fill = Site))
-```
-So, while not exactly normally distributed, it's not wildly skewed either.
-
-```{r fig.height = 7, fig.width = 7}
-ggplot(full_data, aes(y = DO_Median, x = T_Median)) + 
-  geom_point(aes(shape = Site, color = Month)) +
-  geom_smooth() +
-  theme_cbep(base_size = 10) +
-  theme(legend.position="bottom", legend.box = "vertical")
-```
-S01 and S05 have high temperature low or no DO events. S03 has some mid
-temperature low DO events, and SO7 and S05 have low temperature low DO events.
-Those low DO events tend to occur in temporal clusters, all part of one year and
-one month.
-
-Low DO conditions occur infrequently, but when the do occur, they tend to occur
-in clusters.
-
-```{r}
-ggplot(full_data, aes(y = DO_Median, x = sdate, color = Site)) + 
-  geom_point() +
-  geom_smooth(method = 'gam', formula = y ~ s(x, bs = "cs", k = 9*3)) + 
-  theme_cbep(base_size = 10) 
-```
-
-
-#Linear Model With Autocorrelated Errors
-Recall that GLS does not handle incomplete designs.  Since we don't have data
-from all combinations of sites and years, we can not include a sites by years 
-interaction in the model.  From other experience, we expect such a term would be 
-"significant", but possibly not important.
-
-This takes a long time to complete -- about 20 minutes. It's big messy cross 
-correlation model, even without including any covariates.
-```{r}
-if (! file.exists("models/do_gls.rds")) {
-  print(
-    system.time(
-      do_gls <- gls(DO_Median ~ Site + 
-                      #lPrecip + 
-                      #wlPrecip +
-                      #FlowIndex +
-                      MaxT +
-                      Month +
-                      Year_f, #+
-                    #Site : Year_f,
-                    correlation = corAR1(form = ~ as.numeric(sdate) | Site),
-                    na.action = na.omit, 
-                    #method = 'REML',
-                    data = full_data)
-    )
-  )
-  saveRDS(do_gls, file="models/do_gls_.rds")
-} else {
-  do_gls <- readRDS("models/do_gls.rds")
-}
-anova(do_gls)
-```
-
-```{r}
-summary(do_gls)
-```
-
-Results are interesting.  As suspected, dissolved oxygen on successive days are 
-highly autocorrelated -- over 95%.  Once you take into account air temperature
-and time of year, neither site nor year ends up as statistically significant.
-Note that this conflicts with results of the analysis of exceedences, where both
-site and year mattered.
-
-
-## We Explore a Larger Model
-```{r}
-if (! file.exists("models/do_gls_with.rds")) {
-  print(
-    system.time(
-      do_gls_with <- gls(DO_Median ~ Site +
-                      FlowIndex +
-                      T_Median +
-                      MaxT +
-                      Month +
-                      Year_f, #+
-                    #Site : Year_f,
-                    correlation = corAR1(form = ~ as.numeric(sdate) | Site),
-                    na.action = na.omit, 
-                    #method = 'REML',
-                    data = full_data)
-    )
-  )
-  saveRDS(do_gls_with, file="models/do_gls_with.rds")
-} else {
-  do_gls_with <- readRDS("models/do_gls_with.rds")
-}
-anova(do_gls_with)
-```
-Note that in the context of a flow and stream water temperature predictors, we
-see a difference between sites. Air temperature is a lot less important  after 
-we fit a stream temperature term.  Stream temperature ends up as by far the most 
-important predictor. One challenge we have seen in too many other analyses is
-that with the large data sets we have, lots of small signals are statistically
-significant.
 
 # GAMM Analysis
 Here we use "General Additive Models" that allow non-linear (smoother) fits for
@@ -543,58 +317,14 @@ We use the function `gamm()` because it has a relatively simple interface for
 incorporating autocorrelated errors.
 
 We abuse the autocorrelation model slightly, since we don't fit
-separate autocorrelations for each site and season.  That should have little
+separate autocorrelations for each site and season. That should have little
 impact on results, as missing values at beginning and end of most time series
 prevent estimation anyway.
 
-## Initial GAM Model
-Our first GAM simply fits smoothers for each of the major weather-related
-covariates.  Arguably, we should fit separate smoothers by `FlowIndex` for
-each site.
-
-This model takes a long time to run minutes to run (more than 5, less than 15)
-
-, form = ~ as.numeric(sdate) | Site
-
-```{r first_gam, cache = TRUE}
-system.time(
-  do_gam <- gam(DO_Median ~ Site + 
-                  s(FlowIndex) +
-                  s(MaxT) +
-                  s(T_Median) +
-                  Month +
-                  Year_f +
-                  Site : Year_f,
-                correlation = corAR1(form = ~ as.numeric(sdate) | Site),
-                na.action = na.omit, 
-                #method = 'REML',
-                data = full_data)
-)
-
-anova(do_gam)
-```
-
-```{r}
-summary(do_gam)
-```
-
-The site by year interaction is hard to understand.  We will need to look at
-marginal means, but that will be more useful once we handle temporal
-autocorrelation.
-
-```{r}
-plot(do_gam)
-```
-
-The interesting feature here is that effects of both air temperature and water 
-temperature are nearly linear, with water temperature much larger.
-
-Lets try shifting the water temp to a linear term, and dropping the air temp
-term. We have to be back again in the world where confounded factors will
-stop the analysis.  We have to drop the Site by Year term.
-
 ## Initial GAMM model
-This model is also likely to take approximately 15 minutes to run.
+This model is takes approximately 15 minutes to run.  Model selection was based
+on preliminary exploration of several other GLS, GAM and GAMM models (not 
+shown).  
 ```{r first_gamm, cache = TRUE}
 if (! file.exists("models/do_gamm.rds")) {
   print(
@@ -617,48 +347,47 @@ if (! file.exists("models/do_gamm.rds")) {
 ```
 
 ### ANOVA
-```{r}
+```{r anova_first_gamm}
 anova(do_gamm$gam)
 ```
 
 ### Summary
-```{r}
+```{r summary_first_gamm}
 summary(do_gamm$gam)
 ```
 
 ### Estimated Daily Autocorrelation
-```{r}
+```{r autocor_first_gamm}
 summary(do_gamm$lme)$modelStruct$corStruct
 ```
 
-
-
 ### Structure of the Smoother
-```{r}
+```{r smoother_first_gamm}
 plot(do_gamm$gam)
 ```
 
 ### Diagnostic Plots
 The help files for `gam.check()` suggest using care when interpreting results
 for GAMM models, since the function does not correctly incorporate the error
-correlations structure.  However, for our purposes, this is probably sufficient,
+correlation structure.  However, for our purposes, this is probably sufficient,
 since our focus is not on statistical significance, but on estimation.
-```{r}
+```{r diagnostics_first_gamm}
 gam.check(do_gamm$gam)
 ```
-What that shows is, unfortunately, that the extreme low DO events -- which are
+What that shows, unfortunately, is that the extreme low DO events -- which are
 our highest priority in many ways -- are rather poorly modeled.  And it is clear
 the assumptions of normality are not met, especially for those low values.
 
 For careful work, we should probably use bootstrapped confidence intervals or
 something similar, but given how long these models take to fit, that is not 
-practical.  Besides, it is probably overkill.
+practical.  Besides, it is probably overkill for our needs, as relationships
+are generally highly significant and sample sizes large.
 
 ### Estimated Marginal Means
 Reliably calling `emmeans()` for `gamm()` models requires 
 creating a call object and associating it with the model (e.g., as
-`do_gamm$gam$call`). (See the `emmeans` "models" vignette for more info, although
-not all strategies recommended there worked for us).
+`do_gamm$gam$call`). (See the `emmeans` "models" vignette for more info,
+although not all strategies recommended there worked for us).
 
 We first create the call object, then associate it with the model, and finally
 manually construct a reference grid before calling `emmeans()` to extract
@@ -667,11 +396,11 @@ carefully about the structure of the reference grid.
 
 The default `emmeans()` behavior creates a reference grid where marginal 
 means are keyed to mean values of all quantitative predictors, but averaged
-across all factors.  Since we fit YEar only asa factor, we do not specify year 
+across all factors.  Since we fit Year only as a factor, we do not specify year 
 here.
 
 #### By Month
-```{r}
+```{r ls_means_month_first_gamm}
 the_call <-  quote(gamm(DO_Median ~ Site + 
                         T_Median +
                         s(FlowIndex) +
@@ -687,8 +416,8 @@ my_ref_grid <- ref_grid(do_gamm, cov.reduce = median)
 (by_month <- summary(emmeans(my_ref_grid, ~ Month)))
 ```
 
-```{r}
-labl <- 'Values  Flow and\nMedian Daily Water Temperature\nAll Sites Combined'
+```{r plot_ls_means_month_first_GAMM}
+labl <- 'Values Adjusted for Flow and\nWater Temperature\nAll Sites Combined'
 
 plot(by_month) + 
   xlab('DO (mg/l)\n(Flow and Temperature Adjusted)') +
@@ -701,23 +430,21 @@ plot(by_month) +
   theme_cbep(base_size = 12)
 ```
 
-
 #### By Site
-```{r fig.width = 5, fig.height = 4}
+```{r calc_emm_site_first_GAMM}
 (by_site <- summary(emmeans(my_ref_grid, ~ Site)))
 ```
 
-```{r}
+```{r plot_ls_means_site_first_GAMM, fig.width = 5, fig.height = 4}
 plot(by_site) + 
   xlab('DO (mg/l)\n(Flow and Temperature Adjusted)') +
   ylab("Upstream         Main Stem          Lower Tribs") +
-  annotate('text', 11, 2.5, label = labl, size = 3) +
+  #annotate('text', 11, 2.5, label = labl, size = 3) +
   xlim(0,12) +
   geom_vline(xintercept =  7, color = 'orange') +
   geom_vline(xintercept =  5, color = 'red') +
   coord_flip() +
   theme_cbep(base_size = 12)
-
 ```
 
 #### By Year
@@ -727,7 +454,7 @@ by_year <- summary(emmeans(my_ref_grid, 'Year_f'))
 by_year
 ```
 
-```{r}
+```{r plot_ls_means_year_first_GAMM}
 plot(by_year) + 
   annotate('text', 11, 6, label = labl, size = 3) +
   xlim(0,12) +
@@ -766,28 +493,27 @@ if (! file.exists("models/do_gamm_2.rds")) {
 ```
 
 ### ANOVA
-```{r}
+```{r anova_second_GAMM}
 anova(do_gamm_2$gam)
 ```
 
 ### Summary
-```{r}
+```{r sumamry_second_GAMM)}
 summary(do_gamm_2$gam)
 ```
 
 ### Estimated Daily Autocorrelation
-```{r}
+```{r autoco_second_GAMM}
 summary(do_gamm_2$lme)$modelStruct$corStruct
 ```
 
 ### Structure of the Smoother
-```{r}
+```{r smoother_second_GAMM}
 plot(do_gamm_2$gam)
 ```
 
-
 ### Diagnostic Plots
-```{r}
+```{r diagnostics_second_GAMM}
 gam.check(do_gamm_2$gam)
 ```
 The model has essentially the same inadequacies as the prior model.
@@ -795,11 +521,9 @@ The model has essentially the same inadequacies as the prior model.
 ### Estimated Marginal Means
 We again create the call object, and associate it with the model, and finally
 manually construct a reference grid before calling `emmeans()` to extract
-marginal means.  This workflow has the advantage that it requires us to think
-carefully about the structure of the reference grid. We explicitly specify that
-we want the marginal means estimated at Year = 2014.
-
-```{r}
+marginal means.  We explicitly specify that we want the marginal means 
+estimated at Year = 2014.
+```{r ls_means_month_second_gamm}
 the_call <-  quote(gamm(DO_Median ~ Site + 
                         s(T_Median, k = 1) +
                         Year_f,
@@ -808,33 +532,33 @@ the_call <-  quote(gamm(DO_Median ~ Site +
                        method = 'REML',
                        data = full_data))
 do_gamm_2$gam$call <- the_call
+my_ref_grid <- ref_grid(do_gamm_2, cov.reduce = median) 
 ```
 
 #### By Site
-```{r fig.width = 5, fig.height = 4}
+```{r calc_emms_site_second_gamm}
 (by_site_2 <- summary(emmeans(my_ref_grid, ~ Site)))
 ```
 
-```{r}
+```{r plot_emms_site_second_gamm, fig.width = 5, fig.height = 4}
 plot(by_site_2) + 
   xlab('DO (mg/l)\n(Flow and Temperature Adjusted)') +
   ylab("Upstream         Main Stem          Lower Tribs") +
-  annotate('text', 11, 2.5, label = labl, size = 3) +
+  #annotate('text', 11, 2.5, label = labl, size = 3) +
   xlim(0,12) +
   geom_vline(xintercept =  7, color = 'orange') +
   geom_vline(xintercept =  5, color = 'red') +
   coord_flip() +
   theme_cbep(base_size = 12)
-
 ```
 
 #### By Year
-```{r}
+```{r  calc_emms_year_second_gamm}
 my_ref_grid <- ref_grid(do_gamm_2, cov.reduce = median) 
 (by_year_2 <- summary(emmeans(my_ref_grid, 'Year_f')))
 ```
 
-```{r}
+```{r plot_emms_year_second_gamm, fig.width = 5, fig.height = 4}
 plot(by_year_2) + 
   annotate('text', 11, 6, label = labl, size = 3) +
   xlim(0,12) +
@@ -846,10 +570,9 @@ plot(by_year_2) +
   theme_cbep(base_size = 12)
 ```
 
-
 # Compare Marginal Means From Two Models
 ## Calculate Observed Averages
-```{r}
+```{r calc_observed_marginal_means}
 avg_by_site <- full_data %>%
   select(Site, DO_Median) %>%
   group_by(Site) %>%
@@ -866,7 +589,7 @@ avg_by_year <- full_data %>%
 ```
 
 ## By Site
-```{r}
+```{r plot_compare_mods_to_obs_site}
 tibble(Site = by_site$Site,
        observed = avg_by_site,
        large = by_site$emmean,
@@ -886,20 +609,20 @@ ggplot(aes(x = observed)) +
 ```
 
 Correspondence with observed means is only so-so, as is expected with uneven
-sampling histories. The main difference is in shifting position of S05 and S17.
+sampling histories. The main difference is in the positions of S05 and S17.
 These sites have inconsistent sampling histories, so marginal means are adjusted 
 by year.  S17 was observed principally during "bad" years, so the marginal mean
 (which is averaged across for ALL years) as adjusted upwards, since the model
 concludes the observed values would probably have been better.  Meanwhile, site 
 S05 is shifted down, for similar reasons.
 
-The smaller model consistently predicts a smaller marginal mean.  The
+The smaller model consistently predicts a smaller marginal mean. The
 relationship appears to be nearly perfectly linear, which is not too surprising,
 since the smaller model differs by dropping two linear model terms that were 
 averaged across by `emmeans()`.  
 
 ## By Year
-```{r}
+```{r plot_compare_mods_to_obs_year}
 tibble(Year = by_year$Year,
        observed = avg_by_year,
        large = by_year$emmean,
@@ -932,12 +655,11 @@ probably reflects the impact of estimating marginal means by month, which is
 not a term in the smaller model.
 
 # Hierarchical Analysis of Trends
-
-We hierarchical GAMs that includes both autocorrelated errors and a random
-term by year.  The concept is that year to year variation can be thought of
-as random based on annual weather, or perhaps watershed flow conditions. We test
-for a long term trend against that random term, to minimize the risk that we
-overinterpret year to year variability as a trend.  But note that this model
+We develop hierarchical GAMs that includes both autocorrelated errors and a
+random term by year.  The concept is that year to year variation can be thought
+of as random based on annual weather, or perhaps watershed flow conditions. We
+test for a long term trend against that random term, to minimize the risk that
+we overinterpret year to year variability as a trend.  But note that this model
 also includes terms for stream water temperature and flow.
 
 ## Model 1 : Site by Year interaction
@@ -969,7 +691,7 @@ if (! file.exists("models/do_gamm_trend_1.rds")) {
 ```
 
 ### ANOVA
-```{r}
+```{r anova_trend_GAMM_1}
 anova(do_gamm_trend_1$gam)
 ```
 
@@ -977,26 +699,25 @@ Here the Site by Year term is marginally statistically significant, with both
 the marginally significant Site and Site:Year interaction tied to S05.
 
 ### Summary
-```{r}
+```{r summary_trend_GAMM_1}
 summary(do_gamm_trend_1$gam)
 ```
 
 ### Estimated Daily Autocorrelation
-```{r}
+```{r autocor_trend_GAMM_1}
 summary(do_gamm_trend_1$lme)$modelStruct$corStruct
 ```
 
 ### Structure of the Smoother
-```{r}
+```{r smoother_trend_GAMM_1}
 plot(do_gamm_trend_1$gam)
 ```
-
 
 ### Examine Marginal Means
 We need to look at the marginally significant interaction, but we should be
 careful here, as data is only available for selected years for three of our
 sites, including SO5, S06B and S17.  
-```{r}
+```{r maemms_trend_GAMM_1}
 the_call <-  quote(gamm(DO_Median ~ Site * Year +
                         T_Median +
                         s(FlowIndex, k = 5) +
@@ -1012,7 +733,7 @@ do_gamm_trend_1$gam$call <- the_call
 #(by_year <- summary(emmeans(my_ref_grid, ~ Site + Year )))
 ```
 
-```{r}
+```{r plot)emms_trend_GAMM_1}
 emmip(do_gamm_trend_1, Site ~ Year,
       cov.keep = 'Year', cov.reduce = median,
       type = 'response') +
@@ -1024,7 +745,7 @@ decline in DO over time.  In fact, that is mostly an artifact of overfitting
 linear terms to a short record.  S05 data is only available from early in the 
 period of record, and had a moderate DO record. 
 
-```{r}
+```{r show_S05_data}
 full_data %>%
   filter(Site == 'S05', ! is.na(DO_Median)) %>%
   group_by(Year) %>%
@@ -1040,7 +761,7 @@ We conclude that the full interaction model is problematic.
 ## Model 2: No Interaction 
 This model does slight violence to the prior analysis, but is arguably a better
 description of what we know from the available data. It avoids overfitting the
-short site by site records.
+short records at two sites.
 ```{r trend_gamm_2, cache = TRUE}
 if (! file.exists("models/do_gamm_trend_2.rds")) {
   print(
@@ -1063,23 +784,23 @@ if (! file.exists("models/do_gamm_trend_2.rds")) {
 ```
 
 ### ANOVA
-```{r}
+```{r anova_trend_gamm_2}
 anova(do_gamm_trend_2$gam)
 ```
 Here the Year term AND the Site terms are statistically significant.
 
-## Summary
-```{r}
+### Summary
+```{r summary_trend_gamm_2}
 summary(do_gamm_trend_2$gam)
 ```
 
-## Estimated Daily Autocorrelation
-```{r}
+### Estimated Daily Autocorrelation
+```{r autocor_trend_gamm_2}
 summary(do_gamm_trend_2$lme)$modelStruct$corStruct
 ```
 
 ### Structure of the Smoother
-```{r}
+```{r smoother_trend_gamm_2}
 plot(do_gamm_trend_2$gam)
 ```
 
@@ -1087,7 +808,7 @@ plot(do_gamm_trend_2$gam)
 We need to look at the marginally significant interaction, but we should be
 careful here, as data is only available for selected years for three of our
 sites, including SO5, S06B and S17.  
-```{r}
+```{r emm_trend_gamm_2}
 the_call <-  quote(gamm(DO_Median ~ Site + Year +
                         T_Median +
                         s(FlowIndex, k = 5) +
@@ -1104,7 +825,7 @@ my_ref_grid <- ref_grid(do_gamm_trend_2, cov.reduce = median,
 (by_site <- summary(emmeans(my_ref_grid, ~ Site  )))
 ```
 
-```{r}
+```{r plot_trend_gamm_2_quick}
 plot(by_site) +
   xlab('Predicted DO (mg/l)') +
   coord_flip() 
@@ -1112,6 +833,3 @@ plot(by_site) +
 
 Note that we STILL predict low DO for S05 in 2014, but the prediction is
 actually not far of the observed averages.
-
-
-

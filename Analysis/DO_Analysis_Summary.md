@@ -1,20 +1,12 @@
 Summary of Analysis of LCWMD Dissolved Oxygen Data
 ================
 Curtis C. Bohlen, Casco Bay Estuary Partnership.
-01/06/2021
+Revised 11/02/2021
 
--   [Introduction](#introduction)
-    -   [Are Water Quality Criteria
-        Met?](#are-water-quality-criteria-met)
-    -   [Sources of Threshold Values](#sources-of-threshold-values)
-        -   [Dissolved oxygen](#dissolved-oxygen)
-        -   [Chloride](#chloride)
-        -   [Temperature](#temperature)
 -   [Import Libraries](#import-libraries)
 -   [Data Preparation](#data-preparation)
     -   [Initial Folder References](#initial-folder-references)
     -   [Load Weather Data](#load-weather-data)
-    -   [Update Folder References](#update-folder-references)
     -   [Load Data on Sites and Impervious
         Cover](#load-data-on-sites-and-impervious-cover)
     -   [Load Main Data](#load-main-data)
@@ -29,11 +21,7 @@ Curtis C. Bohlen, Casco Bay Estuary Partnership.
         Months](#remove-partial-data-from-winter-months)
     -   [Add Stream Flow Index](#add-stream-flow-index)
     -   [Select Final Data Set](#select-final-data-set)
--   [Crosstabs](#crosstabs)
--   [Exploratory Graphics](#exploratory-graphics)
-    -   [We Explore a Larger Model](#we-explore-a-larger-model)
 -   [GAMM Analysis](#gamm-analysis)
-    -   [Initial GAM Model](#initial-gam-model)
     -   [Initial GAMM model](#initial-gamm-model)
         -   [ANOVA](#anova)
         -   [Summary](#summary)
@@ -57,7 +45,7 @@ Curtis C. Bohlen, Casco Bay Estuary Partnership.
     -   [By Year](#by-year-2)
 -   [Hierarchical Analysis of Trends](#hierarchical-analysis-of-trends)
     -   [Model 1 : Site by Year
-        interaction](#model-1-site-by-year-interaction)
+        interaction](#model-1--site-by-year-interaction)
         -   [ANOVA](#anova-2)
         -   [Summary](#summary-2)
         -   [Estimated Daily
@@ -66,9 +54,9 @@ Curtis C. Bohlen, Casco Bay Estuary Partnership.
         -   [Examine Marginal Means](#examine-marginal-means)
     -   [Model 2: No Interaction](#model-2-no-interaction)
         -   [ANOVA](#anova-3)
-    -   [Summary](#summary-3)
-    -   [Estimated Daily
-        Autocorrelation](#estimated-daily-autocorrelation-3)
+        -   [Summary](#summary-3)
+        -   [Estimated Daily
+            Autocorrelation](#estimated-daily-autocorrelation-3)
         -   [Structure of the Smoother](#structure-of-the-smoother-3)
         -   [Examine Marginal Means](#examine-marginal-means-1)
 
@@ -76,138 +64,39 @@ Curtis C. Bohlen, Casco Bay Estuary Partnership.
     src="https://www.cascobayestuary.org/wp-content/uploads/2014/04/logo_sm.jpg"
     style="position:absolute;top:10px;right:50px;" />
 
-# Introduction
-
-The Long Creek Watershed, almost three and a half square miles in area,
-is dominated by commercial land use. The Maine Mall is one of the
-largest land owners in the watershed, and it is surrounded by a range of
-commercial businesses, from medical offices, to car washes. About a
-third of the watershed in impervious surfaces like roads, parking lots,
-and rooftops.
-
-Landowners with an acre or more of impervious area are required to get a
-Clean Water Act permit for stormwater discharges from their property.
-The LCWMD provides an alternative for landowners to working to receive
-an individual permit. Landowners who elect to participate in the The
-Long Creek Watershed Management District receive a General Permit, in
-return for providing funding to the District, and facilitating the work
-of the district by permitting access to their property for certain
-activities.
-
-For more information on LCWMD, see [their web
-site](restorelongcreek.org).
-
-Over the past decade, LCWMD has contracted with several consulting firms
-to provide water quality monitoring services along Long Creek. This has
-produced one of the most extensive and best documented data set from the
-Northeastern US looking at water quality conditions in an urban stream.
-
-GZA Geoenvironmental Incorporated (GZA) has been the primary monitoring
-contractor for LCWMD in recent years, and in 2019, they conducted a
-thorough review of LCWMD data. These analyses are based on their summary
-data sets, and recapitulate and extend their analyses.
-
-## Are Water Quality Criteria Met?
-
-The primary question we ask in this Notebook, is whether water quality
-criteria pertaining to levels of dissolved oxygen are met. In
-poarticular, we explore various ways of modelling those probabilities,
-and settle on modelling only summertime probabilities as the most
-informative for State of Casco Bay readers.
-
-We ask whether the probability of failing to meet criteria each day is
-changing. Secondarily, we examine differences among sites in the
-probability of failing criteria.
-
-In this data set a “TRUE” value consistently implies that water quality
-criteria were met or exceeded, whether that is achieved by a value
-higher than or lower than some numeric criteria. “TRUE” implies good
-conditions. “FALSE” implies bad conditions.
-
-## Sources of Threshold Values
-
-### Dissolved oxygen
-
-Maine’s Class B water quality standards call for dissolved oxygen above
-7 mg/l, with percent saturation above 75%. The Class C Standards, which
-apply to almost all of Long Creek, call for dissolved oxygen above 5
-mg/l, with percent saturation above 60%. In addition, for class C
-conditions, the thirty day average dissolved oxygen muststay above 6.5
-mg/l.
-
-### Chloride
-
-Maine uses established thresholds for both chronic and acute exposure to
-chloride. These are the “CCC and CMC” standards for chloride in
-freshwater. (06-096 CMR 584). These terms are defined in a footnote as
-follows:
-
-> The Criteria Maximum Concentration (CMC) is an estimate of the highest
-> concentration of a material in surface water to which an aquatic
-> community can be exposed briefly without resulting in an unacceptable
-> effect. The Criterion Continuous Concentration (CCC) is an estimate of
-> the highest concentration of a material in surface water to which an
-> aquatic community can be exposed indefinitely without resulting in an
-> unacceptable effect.
-
-The relevant thresholds are:
-
--   Chloride CCC = 230 mg/l
--   Chloride CMC = 860 mg/l
-
-In practice, chloride in Long Creek are indirectly estimated based on
-measurement of conductivity. The chloride-conductivity correlations is
-fairly close and robust, but estimation is an additional source of
-error, although generally on the level of 10% or less.
-
-### Temperature
-
-There are no legally binding Maine criteria for maximum stream
-temperature, but we can back into thresholds based on research on
-thermal tolerance of brook trout in streams. A study from Michigan and
-Wisconsin, showed that trout are found in streams with daily mean water
-temperatures as high as 25.3°C, but only if the period of exceedence of
-that daily average temperature is short – only one day. Similarly, the
-one day daily maximum temperature above which trout were never found was
-27.6°C. That generates two temperature criteria, one for daily averages,
-and one for daily maximums.
-
-These criteria should be taken as rough values only, as the original
-study was observational, and thus the key driver of suitability for
-trout could be another stressor correlated with these temperature
-metrics.
-
-> Wehrly, Kevin E.; Wang, Lizhu; Mitro, Matthew (2007). “Field‐Based
-> Estimates of Thermal Tolerance Limits for Trout: Incorporating
-> Exposure Time and Temperature Fluctuation.” Transactions of the
-> American Fisheries Society 136(2):365-374.
-
 # Import Libraries
 
 ``` r
 library(tidyverse)
-#> -- Attaching packages --------------------------------------- tidyverse 1.3.0 --
-#> v ggplot2 3.3.3     v purrr   0.3.4
-#> v tibble  3.0.5     v dplyr   1.0.3
-#> v tidyr   1.1.2     v stringr 1.4.0
-#> v readr   1.4.0     v forcats 0.5.0
+#> Warning: package 'tidyverse' was built under R version 4.0.5
+#> -- Attaching packages --------------------------------------- tidyverse 1.3.1 --
+#> v ggplot2 3.3.5     v purrr   0.3.4
+#> v tibble  3.1.4     v dplyr   1.0.7
+#> v tidyr   1.1.3     v stringr 1.4.0
+#> v readr   2.0.1     v forcats 0.5.1
+#> Warning: package 'ggplot2' was built under R version 4.0.5
+#> Warning: package 'tibble' was built under R version 4.0.5
+#> Warning: package 'tidyr' was built under R version 4.0.5
+#> Warning: package 'readr' was built under R version 4.0.5
+#> Warning: package 'dplyr' was built under R version 4.0.5
+#> Warning: package 'forcats' was built under R version 4.0.5
 #> -- Conflicts ------------------------------------------ tidyverse_conflicts() --
 #> x dplyr::filter() masks stats::filter()
 #> x dplyr::lag()    masks stats::lag()
 library(readr)
 
 library(emmeans) # Provides tools for calculating marginal means
-library(nlme)
+#> Warning: package 'emmeans' was built under R version 4.0.5
+#library(nlme)
+
+library(mgcv)    # generalized additive models. Function gamm() allows
+#> Loading required package: nlme
 #> 
 #> Attaching package: 'nlme'
 #> The following object is masked from 'package:dplyr':
 #> 
 #>     collapse
-
-#library(zoo)     # here, for the `rollapply()` function
-
-library(mgcv)    # generalized additive models. Function gamm() allows
-#> This is mgcv 1.8-33. For overview type 'help("mgcv-package")'.
+#> This is mgcv 1.8-36. For overview type 'help("mgcv-package")'.
                  # autocorrelation.
 
 library(CBEPgraphics)
@@ -220,11 +109,10 @@ theme_set(theme_cbep())
 ## Initial Folder References
 
 ``` r
-sibfldnm    <- 'Original_Data'
+sibfldnm    <- 'Data'
 parent      <- dirname(getwd())
 sibling     <- file.path(parent,sibfldnm)
 
-dir.create(file.path(getwd(), 'figures'), showWarnings = FALSE)
 dir.create(file.path(getwd(), 'models'), showWarnings = FALSE)
 ```
 
@@ -247,14 +135,6 @@ weather_data <- read_csv(fpath,
   mutate(pPRCP = dplyr::lag(PRCP))
 ```
 
-## Update Folder References
-
-``` r
-sibfldnm    <- 'Derived_Data'
-parent      <- dirname(getwd())
-sibling     <- file.path(parent,sibfldnm)
-```
-
 ## Load Data on Sites and Impervious Cover
 
 These data were derived from Table 2 from a GZA report to the Long Creek
@@ -272,19 +152,14 @@ fpath <- file.path(sibling, fn)
 
 Site_IC_Data <- read_csv(fpath) %>%
   filter(Site != "--") 
-#> 
+#> Rows: 7 Columns: 8
 #> -- Column specification --------------------------------------------------------
-#> cols(
-#>   Site = col_character(),
-#>   Subwatershed = col_character(),
-#>   Area_ac = col_double(),
-#>   IC_ac = col_double(),
-#>   CumArea_ac = col_double(),
-#>   CumIC_ac = col_double(),
-#>   PctIC = col_character(),
-#>   CumPctIC = col_character()
-#> )
-
+#> Delimiter: ","
+#> chr (4): Site, Subwatershed, PctIC, CumPctIC
+#> dbl (4): Area_ac, IC_ac, CumArea_ac, CumIC_ac
+#> 
+#> i Use `spec()` to retrieve the full column specification for this data.
+#> i Specify the column types or set `show_col_types = FALSE` to quiet this message.
 # Now, create a factor that preserves the order of rows (roughly upstream to downstream). 
 Site_IC_Data <- Site_IC_Data %>%
   mutate(Site = factor(Site, levels = Site_IC_Data$Site))
@@ -309,16 +184,9 @@ Site_IC_Data
 
 Read in the data from the Derived Data folder.
 
-Note that I filter out data from 2019 because that is only a partial
+Note that we filter out data from 2019 because that is only a partial
 year, which might affect estimation of things like seasonal trends. We
 could add it back in, but with care….
-
-*Full\_Data.csv* does not include a field for precipitation from the
-previous day. In earlier work, we learned that a weighted sum of recent
-precipitation provided better explanatory power. But we also want to
-check a simpler model, so we construct a “PPrecip” data field. This is
-based on a modification of code in the “Make\_Daily\_Summaries.Rmd”
-notebook.
 
 ``` r
 fn <- "Full_Data.csv"
@@ -328,17 +196,13 @@ full_data <- read_csv(fpath,
     col_types = cols(DOY = col_integer(), 
         D_Median = col_double(), Precip = col_number(), 
         X1 = col_skip(), Year = col_integer())) %>%
-
   mutate(Site = factor(Site, levels=levels(Site_IC_Data$Site)),
          Month = factor(Month, levels = month.abb),
          Year_f = factor(Year),
-         IC=as.numeric(Site_IC_Data$CumPctIC[match(Site, Site_IC_Data$Site)])) %>%
-
-# We combine data using "match" because we have data for multiple sites and 
-# therefore dates are not unique.  `match()` correctly assigns weather
-# data by date.
-  mutate(PPrecip = weather_data$pPRCP[match(sdate, weather_data$sdate)])
-#> Warning: Missing column names filled in: 'X1' [1]
+         IC=as.numeric(Site_IC_Data$CumPctIC[match(Site, Site_IC_Data$Site)]))
+#> New names:
+#> * `` -> ...1
+#> Warning: The following named parsers don't match the column names: X1
 ```
 
 ### Cleanup
@@ -385,15 +249,12 @@ any year other than 2013. While we do not know if the data point is
 legitimate or not, it has very high leverage in several models, and we
 suspect a transcription error of some sort.
 
-``` r
+``` rshow_bad_obs
 full_data %>%
   filter(Site == 'S06B') %>%
   select(sdate, DO_Median) %>%
   ggplot(aes(x = sdate, y = DO_Median)) + geom_point()
-#> Warning: Removed 163 rows containing missing values (geom_point).
 ```
-
-<img src="DO_Analysis_Summary_files/figure-gfm/unnamed-chunk-8-1.png" style="display: block; margin: auto;" />
 
 We remove the Chloride value from the data.
 
@@ -430,7 +291,7 @@ ggplot(aes(x = sdate)) +
            label = 'Chlorides / 20', color = 'green')
 ```
 
-<img src="DO_Analysis_Summary_files/figure-gfm/unnamed-chunk-10-1.png" style="display: block; margin: auto;" />
+<img src="DO_Analysis_Summary_files/figure-gfm/show_bad_do_chl_data-1.png" style="display: block; margin: auto;" />
 
 The unstable behavior after October 23rd is questionable. DO does not
 normally fluctuate so widely. Percent saturation associated with these
@@ -575,384 +436,12 @@ this predictor is likely to have a smaller sample size.
 full_data <- full_data %>%
   mutate(Year_f = factor(Year)) %>%
   select (Site, sdate, Year, Year_f, Month, DOY, 
-          Precip, lPrecip, PPrecip, wlPrecip, MaxT,
+          Precip, lPrecip, wlPrecip, MaxT,
           D_Median, lD_Median,
           DO_Median, PctSat_Median, T_Median, Chl_Median,
           IC, FlowIndex) %>%
   filter(! is.na(DO_Median))
 ```
-
-# Crosstabs
-
-``` r
-xtabs(~ Site + Year, data = full_data)
-#>       Year
-#> Site   2010 2011 2012 2013 2014 2015 2016 2017 2018
-#>   S07   161  141  194  220  259  186  215  261  209
-#>   S06B    0    0    0  214  119  190  198  261  237
-#>   S05    66   72    0  122  214    0    0    0    0
-#>   S17     0    0    0    0    0  220  204  239  188
-#>   S03   180  271  200  248  259  220  174  237  225
-#>   S01   180  247  200  263  207  194  227  261  158
-```
-
-Note that Site S05 and S17 have partially complementary data histories
-on dissolved oxygen.
-
-``` r
-xtabs(~ Month + Year + Site, data = full_data)
-#> , , Site = S07
-#> 
-#>      Year
-#> Month 2010 2011 2012 2013 2014 2015 2016 2017 2018
-#>   Jan    0    0    0    0    0    0    0    0    0
-#>   Feb    0    0    0    0    0    0    0    0    0
-#>   Mar    0   31   23    0   21    0    1   31    2
-#>   Apr    0   30   30    6   30   30   30   30   25
-#>   May    0   31   29   31   31   31   31   31   22
-#>   Jun   15   30   23   30   30   30    7   30   30
-#>   Jul   24   19   30   31   31   31   26   31   31
-#>   Aug   31    0   21   31   31   31   31   30   17
-#>   Sep   30    0   25   30   30   30   30   30   30
-#>   Oct   31    0   11   31   31    3   31   31   31
-#>   Nov   30    0    2   30   24    0   28   17   21
-#>   Dec    0    0    0    0    0    0    0    0    0
-#> 
-#> , , Site = S06B
-#> 
-#>      Year
-#> Month 2010 2011 2012 2013 2014 2015 2016 2017 2018
-#>   Jan    0    0    0    0    0    0    0    0    0
-#>   Feb    0    0    0    0    0    0    0    0    0
-#>   Mar    0    0    0   19    0    0    2   31    2
-#>   Apr    0    0    0   30    0    0   30   30   30
-#>   May    0    0    0   31    0   31   31   31   31
-#>   Jun    0    0    0   30    0   30   30   30   30
-#>   Jul    0    0    0   31   11   31   26   31   31
-#>   Aug    0    0    0   29   31   31   31   30   31
-#>   Sep    0    0    0    0   23   30   30   30   30
-#>   Oct    0    0    0   14   30   31   18   31   31
-#>   Nov    0    0    0   30   24    6    0   17   21
-#>   Dec    0    0    0    0    0    0    0    0    0
-#> 
-#> , , Site = S05
-#> 
-#>      Year
-#> Month 2010 2011 2012 2013 2014 2015 2016 2017 2018
-#>   Jan    0    0    0    0    0    0    0    0    0
-#>   Feb    0    0    0    0    0    0    0    0    0
-#>   Mar    0    0    0    4    0    0    0    0    0
-#>   Apr    0   22    0   25    6    0    0    0    0
-#>   May    0   16    0    0   31    0    0    0    0
-#>   Jun    0    9    0    0   30    0    0    0    0
-#>   Jul   11   13    0    0   31    0    0    0    0
-#>   Aug   10   12    0    2   31    0    0    0    0
-#>   Sep   24    0    0   30   30    0    0    0    0
-#>   Oct    0    0    0   31   31    0    0    0    0
-#>   Nov   21    0    0   30   24    0    0    0    0
-#>   Dec    0    0    0    0    0    0    0    0    0
-#> 
-#> , , Site = S17
-#> 
-#>      Year
-#> Month 2010 2011 2012 2013 2014 2015 2016 2017 2018
-#>   Jan    0    0    0    0    0    0    0    0    0
-#>   Feb    0    0    0    0    0    0    0    0    0
-#>   Mar    0    0    0    0    0    0    0   31    3
-#>   Apr    0    0    0    0    0   30   20   30   25
-#>   May    0    0    0    0    0   31   31   31   22
-#>   Jun    0    0    0    0    0   30    7   30   30
-#>   Jul    0    0    0    0    0   31   26   31   31
-#>   Aug    0    0    0    0    0   31   31   30   31
-#>   Sep    0    0    0    0    0   30   30   30   26
-#>   Oct    0    0    0    0    0   31   31   26    0
-#>   Nov    0    0    0    0    0    6   28    0   20
-#>   Dec    0    0    0    0    0    0    0    0    0
-#> 
-#> , , Site = S03
-#> 
-#>      Year
-#> Month 2010 2011 2012 2013 2014 2015 2016 2017 2018
-#>   Jan    0    0    0    0    0    0    0    0    0
-#>   Feb    0    0    0    0    0    0    0    0    0
-#>   Mar    0   31   31    4   21    0    1   31    3
-#>   Apr    0   30   30   30   30   30   30   30   30
-#>   May    0   31   27   31   31   31   31   26   31
-#>   Jun   27   30   23   30   30   30   11   29   30
-#>   Jul   31   31   30   31   31   31   26   31   31
-#>   Aug   31   27   21   31   31   31   31   30   18
-#>   Sep   30   30   25   30   30   30   30   30   30
-#>   Oct   31   31   11   31   31   31   14   30   31
-#>   Nov   30   30    2   30   24    6    0    0   21
-#>   Dec    0    0    0    0    0    0    0    0    0
-#> 
-#> , , Site = S01
-#> 
-#>      Year
-#> Month 2010 2011 2012 2013 2014 2015 2016 2017 2018
-#>   Jan    0    0    0    0    0    0    0    0    0
-#>   Feb    0    0    0    0    0    0    0    0    0
-#>   Mar    0   31   31   19   11    0    0   31    3
-#>   Apr    0   30   30   30   30   21   20   30   30
-#>   May    0   31   29   31   31   14   31   31   31
-#>   Jun   27   30   23   30    9   30   30   30   18
-#>   Jul   31   31   28   31   10   31   26   31   23
-#>   Aug   31   16   21   31   31   31   31   30   26
-#>   Sep   30   30   25   30   30   30   30   30   24
-#>   Oct   31   18   11   31   31   31   31   31    0
-#>   Nov   30   30    2   30   24    6   28   17    3
-#>   Dec    0    0    0    0    0    0    0    0    0
-```
-
-# Exploratory Graphics
-
-``` r
-ggplot(full_data, aes(x = DO_Median)) + geom_histogram(aes(fill = Site))
-#> `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
-```
-
-<img src="DO_Analysis_Summary_files/figure-gfm/unnamed-chunk-17-1.png" style="display: block; margin: auto;" />
-So, while not exactly normally distributed, it’s not wildly skewed
-either.
-
-``` r
-ggplot(full_data, aes(y = DO_Median, x = T_Median)) + 
-  geom_point(aes(shape = Site, color = Month)) +
-  geom_smooth() +
-  theme_cbep(base_size = 10) +
-  theme(legend.position="bottom", legend.box = "vertical")
-#> `geom_smooth()` using method = 'gam' and formula 'y ~ s(x, bs = "cs")'
-#> Warning: Removed 78 rows containing non-finite values (stat_smooth).
-#> Warning: Removed 78 rows containing missing values (geom_point).
-```
-
-<img src="DO_Analysis_Summary_files/figure-gfm/unnamed-chunk-18-1.png" style="display: block; margin: auto;" />
-S01 and S05 have high temperature low or no DO events. S03 has some mid
-temperature low DO events, and SO7 and S05 have low temperature low DO
-events. Those low DO events tend to occur in temporal clusters, all part
-of one year and one month.
-
-Low DO conditions occur infrequently, but when the do occur, they tend
-to occur in clusters.
-
-``` r
-ggplot(full_data, aes(y = DO_Median, x = sdate, color = Site)) + 
-  geom_point() +
-  geom_smooth(method = 'gam', formula = y ~ s(x, bs = "cs", k = 9*3)) + 
-  theme_cbep(base_size = 10) 
-```
-
-<img src="DO_Analysis_Summary_files/figure-gfm/unnamed-chunk-19-1.png" style="display: block; margin: auto;" />
-
-\#Linear Model With Autocorrelated Errors Recall that GLS does not
-handle incomplete designs. Since we don’t have data from all
-combinations of sites and years, we can not include a sites by years
-interaction in the model. From other experience, we expect such a term
-would be “significant”, but possibly not important.
-
-This takes a long time to complete – about 20 minutes. It’s big messy
-cross correlation model, even without including any covariates.
-
-``` r
-if (! file.exists("models/do_gls.rds")) {
-  print(
-    system.time(
-      do_gls <- gls(DO_Median ~ Site + 
-                      #lPrecip + 
-                      #wlPrecip +
-                      #FlowIndex +
-                      MaxT +
-                      Month +
-                      Year_f, #+
-                    #Site : Year_f,
-                    correlation = corAR1(form = ~ as.numeric(sdate) | Site),
-                    na.action = na.omit, 
-                    #method = 'REML',
-                    data = full_data)
-    )
-  )
-  saveRDS(do_gls, file="models/do_gls_.rds")
-} else {
-  do_gls <- readRDS("models/do_gls.rds")
-}
-#>    user  system elapsed 
-#> 1008.89    3.33 1012.75
-anova(do_gls)
-#> Denom. DF: 8318 
-#>             numDF  F-value p-value
-#> (Intercept)     1 3257.223  <.0001
-#> Site            5    1.525  0.1782
-#> MaxT            1  407.937  <.0001
-#> Month           8    3.972  0.0001
-#> Year_f          8    1.515  0.1461
-```
-
-``` r
-summary(do_gls)
-#> Generalized least squares fit by REML
-#>   Model: DO_Median ~ Site + MaxT + Month + Year_f 
-#>   Data: full_data 
-#>        AIC      BIC    logLik
-#>   17238.57 17414.22 -8594.284
-#> 
-#> Correlation Structure: ARMA(1,0)
-#>  Formula: ~as.numeric(sdate) | Site 
-#>  Parameter estimate(s):
-#>      Phi1 
-#> 0.9575564 
-#> 
-#> Coefficients:
-#>                 Value Std.Error    t-value p-value
-#> (Intercept) 10.360708 0.6578226  15.750003  0.0000
-#> SiteS06B    -0.194813 0.5299333  -0.367617  0.7132
-#> SiteS05     -0.318545 0.6758644  -0.471315  0.6374
-#> SiteS17      0.526815 0.6042296   0.871879  0.3833
-#> SiteS03      0.775535 0.4518892   1.716205  0.0862
-#> SiteS01      0.460786 0.4509628   1.021784  0.3069
-#> MaxT        -0.033913 0.0016859 -20.116036  0.0000
-#> MonthApr    -0.419544 0.1304339  -3.216524  0.0013
-#> MonthMay    -0.342303 0.1728604  -1.980229  0.0477
-#> MonthJun    -0.571610 0.2011497  -2.841713  0.0045
-#> MonthJul    -0.946772 0.2207789  -4.288329  0.0000
-#> MonthAug    -1.042005 0.2351381  -4.431461  0.0000
-#> MonthSep    -1.036205 0.2494635  -4.153735  0.0000
-#> MonthOct    -0.875918 0.2638122  -3.320234  0.0009
-#> MonthNov    -0.904298 0.2830003  -3.195397  0.0014
-#> Year_f2011  -0.187612 0.7455771  -0.251633  0.8013
-#> Year_f2012  -0.402658 0.7670552  -0.524940  0.5996
-#> Year_f2013  -0.206702 0.7016717  -0.294584  0.7683
-#> Year_f2014  -0.851183 0.7013648  -1.213609  0.2249
-#> Year_f2015  -0.810683 0.7322038  -1.107183  0.2682
-#> Year_f2016  -1.881536 0.7248055  -2.595918  0.0095
-#> Year_f2017  -0.466295 0.7114916  -0.655377  0.5122
-#> Year_f2018  -1.121278 0.7205204  -1.556206  0.1197
-#> 
-#>  Correlation: 
-#>            (Intr) StS06B SitS05 SitS17 SitS03 SitS01 MaxT   MnthAp MnthMy
-#> SiteS06B   -0.209                                                        
-#> SiteS05    -0.329  0.272                                                 
-#> SiteS17    -0.175  0.378  0.190                                          
-#> SiteS03    -0.350  0.432  0.352  0.376                                   
-#> SiteS01    -0.348  0.434  0.351  0.379  0.517                            
-#> MaxT       -0.049 -0.001 -0.002  0.000 -0.001  0.000                     
-#> MonthApr   -0.175  0.001 -0.013 -0.003  0.001 -0.001 -0.014              
-#> MonthMay   -0.233 -0.006 -0.007 -0.003  0.001 -0.002 -0.015  0.725       
-#> MonthJun   -0.278 -0.010 -0.006 -0.004 -0.001 -0.003 -0.012  0.605  0.818
-#> MonthJul   -0.300 -0.015 -0.010 -0.006 -0.002 -0.005 -0.009  0.539  0.719
-#> MonthAug   -0.309 -0.017 -0.014 -0.008 -0.005 -0.008 -0.013  0.499  0.659
-#> MonthSep   -0.314 -0.018 -0.015 -0.009 -0.006 -0.010  0.004  0.465  0.609
-#> MonthOct   -0.311 -0.019 -0.014 -0.009 -0.007 -0.011  0.004  0.436  0.568
-#> MonthNov   -0.303 -0.018 -0.014 -0.010 -0.005 -0.013  0.005  0.404  0.525
-#> Year_f2011 -0.626 -0.023  0.004 -0.020 -0.040 -0.040  0.006  0.021  0.041
-#> Year_f2012 -0.650  0.013  0.146  0.004  0.004  0.003  0.009  0.022  0.039
-#> Year_f2013 -0.671 -0.124  0.020 -0.029 -0.005 -0.009  0.009  0.013  0.031
-#> Year_f2014 -0.667 -0.073 -0.004 -0.015  0.002  0.005  0.004  0.013  0.027
-#> Year_f2015 -0.665 -0.121  0.138 -0.163 -0.004 -0.005 -0.001 -0.006  0.010
-#> Year_f2016 -0.680 -0.113  0.146 -0.155  0.014  0.005  0.001  0.003  0.019
-#> Year_f2017 -0.701 -0.127  0.145 -0.151  0.008  0.003  0.006  0.025  0.045
-#> Year_f2018 -0.684 -0.125  0.144 -0.155  0.004  0.008  0.005  0.010  0.026
-#>            MnthJn MnthJl MnthAg MnthSp MnthOc MnthNv Y_2011 Y_2012 Y_2013
-#> SiteS06B                                                                 
-#> SiteS05                                                                  
-#> SiteS17                                                                  
-#> SiteS03                                                                  
-#> SiteS01                                                                  
-#> MaxT                                                                     
-#> MonthApr                                                                 
-#> MonthMay                                                                 
-#> MonthJun                                                                 
-#> MonthJul    0.865                                                        
-#> MonthAug    0.785  0.897                                                 
-#> MonthSep    0.720  0.814  0.899                                          
-#> MonthOct    0.668  0.750  0.822  0.906                                   
-#> MonthNov    0.614  0.687  0.749  0.821  0.899                            
-#> Year_f2011  0.066  0.079  0.089  0.098  0.101  0.102                     
-#> Year_f2012  0.061  0.070  0.075  0.078  0.079  0.080  0.534              
-#> Year_f2013  0.052  0.061  0.064  0.067  0.065  0.064  0.577  0.565       
-#> Year_f2014  0.045  0.052  0.056  0.058  0.057  0.059  0.575  0.559  0.623
-#> Year_f2015  0.032  0.043  0.050  0.056  0.061  0.067  0.557  0.561  0.610
-#> Year_f2016  0.040  0.050  0.055  0.060  0.062  0.067  0.561  0.567  0.616
-#> Year_f2017  0.068  0.079  0.085  0.090  0.092  0.097  0.575  0.580  0.631
-#> Year_f2018  0.047  0.057  0.062  0.066  0.069  0.069  0.565  0.571  0.622
-#>            Y_2014 Y_2015 Y_2016 Y_2017
-#> SiteS06B                              
-#> SiteS05                               
-#> SiteS17                               
-#> SiteS03                               
-#> SiteS01                               
-#> MaxT                                  
-#> MonthApr                              
-#> MonthMay                              
-#> MonthJun                              
-#> MonthJul                              
-#> MonthAug                              
-#> MonthSep                              
-#> MonthOct                              
-#> MonthNov                              
-#> Year_f2011                            
-#> Year_f2012                            
-#> Year_f2013                            
-#> Year_f2014                            
-#> Year_f2015  0.597                     
-#> Year_f2016  0.603  0.637              
-#> Year_f2017  0.617  0.650  0.657       
-#> Year_f2018  0.608  0.641  0.647  0.661
-#> 
-#> Standardized residuals:
-#>        Min         Q1        Med         Q3        Max 
-#> -4.1810868 -0.7357096 -0.2660105  0.4099127  2.9213155 
-#> 
-#> Residual standard error: 2.324134 
-#> Degrees of freedom: 8341 total; 8318 residual
-```
-
-Results are interesting. As suspected, dissolved oxygen on successive
-days are highly autocorrelated – over 95%. Once you take into account
-air temperature and time of year, neither site nor year ends up as
-statistically significant. Note that this conflicts with results of the
-analysis of exceedences, where both site and year mattered.
-
-## We Explore a Larger Model
-
-``` r
-if (! file.exists("models/do_gls_with.rds")) {
-  print(
-    system.time(
-      do_gls_with <- gls(DO_Median ~ Site +
-                      FlowIndex +
-                      T_Median +
-                      MaxT +
-                      Month +
-                      Year_f, #+
-                    #Site : Year_f,
-                    correlation = corAR1(form = ~ as.numeric(sdate) | Site),
-                    na.action = na.omit, 
-                    #method = 'REML',
-                    data = full_data)
-    )
-  )
-  saveRDS(do_gls_with, file="models/do_gls_with.rds")
-} else {
-  do_gls_with <- readRDS("models/do_gls_with.rds")
-}
-anova(do_gls_with)
-#> Denom. DF: 6088 
-#>             numDF   F-value p-value
-#> (Intercept)     1 11762.704  <.0001
-#> Site            5     7.777  <.0001
-#> FlowIndex       1    13.669  0.0002
-#> T_Median        1  2144.039  <.0001
-#> MaxT            1     5.585  0.0181
-#> Month           8     4.814  <.0001
-#> Year_f          8     8.430  <.0001
-```
-
-Note that in the context of a flow and stream water temperature
-predictors, we see a difference between sites. Air temperature is a lot
-less important after we fit a stream temperature term. Stream
-temperature ends up as by far the most important predictor. One
-challenge we have seen in too many other analyses is that with the large
-data sets we have, lots of small signals are statistically significant.
 
 # GAMM Analysis
 
@@ -969,167 +458,11 @@ autocorrelations for each site and season. That should have little
 impact on results, as missing values at beginning and end of most time
 series prevent estimation anyway.
 
-## Initial GAM Model
-
-Our first GAM simply fits smoothers for each of the major
-weather-related covariates. Arguably, we should fit separate smoothers
-by `FlowIndex` for each site.
-
-This model takes a long time to run minutes to run (more than 5, less
-than 15)
-
-, form = \~ as.numeric(sdate) \| Site
-
-``` r
-system.time(
-  do_gam <- gam(DO_Median ~ Site + 
-                  s(FlowIndex) +
-                  s(MaxT) +
-                  s(T_Median) +
-                  Month +
-                  Year_f +
-                  Site : Year_f,
-                correlation = corAR1(form = ~ as.numeric(sdate) | Site),
-                na.action = na.omit, 
-                #method = 'REML',
-                data = full_data)
-)
-#>    user  system elapsed 
-#>    0.46    0.02    0.48
-
-anova(do_gam)
-#> 
-#> Family: gaussian 
-#> Link function: identity 
-#> 
-#> Formula:
-#> DO_Median ~ Site + s(FlowIndex) + s(MaxT) + s(T_Median) + Month + 
-#>     Year_f + Site:Year_f
-#> 
-#> Parametric Terms:
-#>             df     F p-value
-#> Site         5 40.65  <2e-16
-#> Month        8 94.87  <2e-16
-#> Year_f       8 55.54  <2e-16
-#> Site:Year_f 29 40.96  <2e-16
-#> 
-#> Approximate significance of smooth terms:
-#>                edf Ref.df       F p-value
-#> s(FlowIndex) 8.209  8.827  38.098  <2e-16
-#> s(MaxT)      1.000  1.000   6.286  0.0122
-#> s(T_Median)  7.850  8.667 126.479  <2e-16
-```
-
-``` r
-summary(do_gam)
-#> 
-#> Family: gaussian 
-#> Link function: identity 
-#> 
-#> Formula:
-#> DO_Median ~ Site + s(FlowIndex) + s(MaxT) + s(T_Median) + Month + 
-#>     Year_f + Site:Year_f
-#> 
-#> Parametric coefficients:
-#>                      Estimate Std. Error t value Pr(>|t|)    
-#> (Intercept)          9.953823   0.198180  50.226  < 2e-16 ***
-#> SiteS06B            -0.218971   0.051644  -4.240 2.27e-05 ***
-#> SiteS05             -0.106136   0.224936  -0.472 0.637051    
-#> SiteS17              0.528194   0.051333  10.290  < 2e-16 ***
-#> SiteS03              0.670802   0.176932   3.791 0.000151 ***
-#> SiteS01              0.695656   0.176927   3.932 8.52e-05 ***
-#> MonthApr             0.469193   0.136108   3.447 0.000570 ***
-#> MonthMay            -0.079926   0.155858  -0.513 0.608102    
-#> MonthJun            -0.841687   0.163577  -5.146 2.75e-07 ***
-#> MonthJul            -0.725149   0.172388  -4.206 2.63e-05 ***
-#> MonthAug            -0.355963   0.170407  -2.089 0.036758 *  
-#> MonthSep            -0.557283   0.165661  -3.364 0.000773 ***
-#> MonthOct            -1.247961   0.154321  -8.087 7.34e-16 ***
-#> MonthNov            -0.804766   0.135343  -5.946 2.90e-09 ***
-#> Year_f2011          -0.900455   0.171737  -5.243 1.63e-07 ***
-#> Year_f2012          -0.962485   0.177202  -5.432 5.80e-08 ***
-#> Year_f2013          -1.036500   0.205507  -5.044 4.70e-07 ***
-#> Year_f2014          -1.301770   0.155081  -8.394  < 2e-16 ***
-#> Year_f2015          -2.026244   0.182088 -11.128  < 2e-16 ***
-#> Year_f2016          -2.500572   0.154054 -16.232  < 2e-16 ***
-#> Year_f2017          -2.012066   0.149005 -13.503  < 2e-16 ***
-#> Year_f2018          -1.941754   0.151770 -12.794  < 2e-16 ***
-#> SiteS06B:Year_f2011  0.000000   0.000000      NA       NA    
-#> SiteS05:Year_f2011  -0.012416   0.283883  -0.044 0.965117    
-#> SiteS17:Year_f2011   0.000000   0.000000      NA       NA    
-#> SiteS03:Year_f2011  -0.049026   0.219843  -0.223 0.823538    
-#> SiteS01:Year_f2011  -0.289654   0.220928  -1.311 0.189881    
-#> SiteS06B:Year_f2012  0.000000   0.000000      NA       NA    
-#> SiteS05:Year_f2012   0.000000   0.000000      NA       NA    
-#> SiteS17:Year_f2012   0.000000   0.000000      NA       NA    
-#> SiteS03:Year_f2012   0.165284   0.237730   0.695 0.486919    
-#> SiteS01:Year_f2012  -0.243333   0.237802  -1.023 0.306226    
-#> SiteS06B:Year_f2013 -0.051691   0.188231  -0.275 0.783621    
-#> SiteS05:Year_f2013   0.008432   0.722156   0.012 0.990684    
-#> SiteS17:Year_f2013   0.000000   0.000000      NA       NA    
-#> SiteS03:Year_f2013   0.045593   0.277933   0.164 0.869702    
-#> SiteS01:Year_f2013  -3.315286   0.277795 -11.934  < 2e-16 ***
-#> SiteS06B:Year_f2014  0.074789   0.124126   0.603 0.546848    
-#> SiteS05:Year_f2014  -1.899962   0.251167  -7.565 4.47e-14 ***
-#> SiteS17:Year_f2014   0.000000   0.000000      NA       NA    
-#> SiteS03:Year_f2014  -0.956570   0.209875  -4.558 5.27e-06 ***
-#> SiteS01:Year_f2014  -0.361224   0.213039  -1.696 0.090017 .  
-#> SiteS06B:Year_f2015  0.256490   0.152720   1.679 0.093112 .  
-#> SiteS05:Year_f2015   0.000000   0.000000      NA       NA    
-#> SiteS17:Year_f2015   0.426128   0.141355   3.015 0.002584 ** 
-#> SiteS03:Year_f2015   0.911032   0.247326   3.684 0.000232 ***
-#> SiteS01:Year_f2015   0.270850   0.247835   1.093 0.274496    
-#> SiteS06B:Year_f2016 -1.041034   0.109504  -9.507  < 2e-16 ***
-#> SiteS05:Year_f2016   0.000000   0.000000      NA       NA    
-#> SiteS17:Year_f2016  -0.539077   0.101428  -5.315 1.11e-07 ***
-#> SiteS03:Year_f2016   0.679921   0.214512   3.170 0.001534 ** 
-#> SiteS01:Year_f2016  -0.593137   0.208352  -2.847 0.004431 ** 
-#> SiteS06B:Year_f2017  0.471999   0.099747   4.732 2.27e-06 ***
-#> SiteS05:Year_f2017   0.000000   0.000000      NA       NA    
-#> SiteS17:Year_f2017   0.632383   0.095066   6.652 3.14e-11 ***
-#> SiteS03:Year_f2017   0.547327   0.206462   2.651 0.008047 ** 
-#> SiteS01:Year_f2017   0.667593   0.203808   3.276 0.001060 ** 
-#> SiteS06B:Year_f2018  0.070477   0.114898   0.613 0.539645    
-#> SiteS05:Year_f2018   0.000000   0.000000      NA       NA    
-#> SiteS17:Year_f2018   0.008760   0.103802   0.084 0.932750    
-#> SiteS03:Year_f2018  -0.677929   0.208732  -3.248 0.001169 ** 
-#> SiteS01:Year_f2018   0.486272   0.215056   2.261 0.023786 *  
-#> ---
-#> Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-#> 
-#> Approximate significance of smooth terms:
-#>                edf Ref.df       F p-value    
-#> s(FlowIndex) 8.209  8.827  38.098  <2e-16 ***
-#> s(MaxT)      1.000  1.000   6.286  0.0122 *  
-#> s(T_Median)  7.850  8.667 126.479  <2e-16 ***
-#> ---
-#> Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-#> 
-#> Rank: 76/89
-#> R-sq.(adj) =  0.799   Deviance explained = 80.1%
-#> GCV = 1.3438  Scale est. = 1.3293    n = 6113
-```
-
-The site by year interaction is hard to understand. We will need to look
-at marginal means, but that will be more useful once we handle temporal
-autocorrelation.
-
-``` r
-plot(do_gam)
-```
-
-<img src="DO_Analysis_Summary_files/figure-gfm/unnamed-chunk-24-1.png" style="display: block; margin: auto;" /><img src="DO_Analysis_Summary_files/figure-gfm/unnamed-chunk-24-2.png" style="display: block; margin: auto;" /><img src="DO_Analysis_Summary_files/figure-gfm/unnamed-chunk-24-3.png" style="display: block; margin: auto;" />
-
-The interesting feature here is that effects of both air temperature and
-water temperature are nearly linear, with water temperature much larger.
-
-Lets try shifting the water temp to a linear term, and dropping the air
-temp term. We have to be back again in the world where confounded
-factors will stop the analysis. We have to drop the Site by Year term.
-
 ## Initial GAMM model
 
-This model is also likely to take approximately 15 minutes to run.
+This model is takes approximately 15 minutes to run. Model selection was
+based on preliminary exploration of several other GLS, GAM and GAMM
+models (not shown).
 
 ``` r
 if (! file.exists("models/do_gamm.rds")) {
@@ -1151,7 +484,7 @@ if (! file.exists("models/do_gamm.rds")) {
   do_gamm <- readRDS("models/do_gamm.rds")
 }
 #>    user  system elapsed 
-#>  600.11    2.64  603.00
+#>  663.38    2.83  666.94
 ```
 
 ### ANOVA
@@ -1241,13 +574,13 @@ summary(do_gamm$lme)$modelStruct$corStruct
 plot(do_gamm$gam)
 ```
 
-<img src="DO_Analysis_Summary_files/figure-gfm/unnamed-chunk-28-1.png" style="display: block; margin: auto;" />
+<img src="DO_Analysis_Summary_files/figure-gfm/smoother_first_gamm-1.png" style="display: block; margin: auto;" />
 
 ### Diagnostic Plots
 
 The help files for `gam.check()` suggest using care when interpreting
 results for GAMM models, since the function does not correctly
-incorporate the error correlations structure. However, for our purposes,
+incorporate the error correlation structure. However, for our purposes,
 this is probably sufficient, since our focus is not on statistical
 significance, but on estimation.
 
@@ -1255,7 +588,7 @@ significance, but on estimation.
 gam.check(do_gamm$gam)
 ```
 
-<img src="DO_Analysis_Summary_files/figure-gfm/unnamed-chunk-29-1.png" style="display: block; margin: auto;" />
+<img src="DO_Analysis_Summary_files/figure-gfm/diagnostics_first_gamm-1.png" style="display: block; margin: auto;" />
 
     #> 
     #> 'gamm' based fit - care required with interpretation.
@@ -1264,18 +597,20 @@ gam.check(do_gamm$gam)
     #> indicate that k is too low, especially if edf is close to k'.
     #> 
     #>                k'  edf k-index p-value    
-    #> s(FlowIndex) 9.00 7.38    0.87  <2e-16 ***
+    #> s(FlowIndex) 9.00 7.38    0.89  <2e-16 ***
     #> ---
     #> Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
-What that shows is, unfortunately, that the extreme low DO events –
+What that shows, unfortunately, is that the extreme low DO events –
 which are our highest priority in many ways – are rather poorly modeled.
 And it is clear the assumptions of normality are not met, especially for
 those low values.
 
 For careful work, we should probably use bootstrapped confidence
 intervals or something similar, but given how long these models take to
-fit, that is not practical. Besides, it is probably overkill.
+fit, that is not practical. Besides, it is probably overkill for our
+needs, as relationships are generally highly significant and sample
+sizes large.
 
 ### Estimated Marginal Means
 
@@ -1292,7 +627,7 @@ grid.
 
 The default `emmeans()` behavior creates a reference grid where marginal
 means are keyed to mean values of all quantitative predictors, but
-averaged across all factors. Since we fit YEar only asa factor, we do
+averaged across all factors. Since we fit Year only as a factor, we do
 not specify year here.
 
 #### By Month
@@ -1327,7 +662,7 @@ my_ref_grid <- ref_grid(do_gamm, cov.reduce = median)
 ```
 
 ``` r
-labl <- 'Values  Flow and\nMedian Daily Water Temperature\nAll Sites Combined'
+labl <- 'Values Adjusted for Flow and\nWater Temperature\nAll Sites Combined'
 
 plot(by_month) + 
   xlab('DO (mg/l)\n(Flow and Temperature Adjusted)') +
@@ -1340,7 +675,7 @@ plot(by_month) +
   theme_cbep(base_size = 12)
 ```
 
-<img src="DO_Analysis_Summary_files/figure-gfm/unnamed-chunk-31-1.png" style="display: block; margin: auto;" />
+<img src="DO_Analysis_Summary_files/figure-gfm/plot_ls_means_month_first_GAMM-1.png" style="display: block; margin: auto;" />
 
 #### By Site
 
@@ -1362,7 +697,7 @@ plot(by_month) +
 plot(by_site) + 
   xlab('DO (mg/l)\n(Flow and Temperature Adjusted)') +
   ylab("Upstream         Main Stem          Lower Tribs") +
-  annotate('text', 11, 2.5, label = labl, size = 3) +
+  #annotate('text', 11, 2.5, label = labl, size = 3) +
   xlim(0,12) +
   geom_vline(xintercept =  7, color = 'orange') +
   geom_vline(xintercept =  5, color = 'red') +
@@ -1370,7 +705,7 @@ plot(by_site) +
   theme_cbep(base_size = 12)
 ```
 
-<img src="DO_Analysis_Summary_files/figure-gfm/unnamed-chunk-33-1.png" style="display: block; margin: auto;" />
+<img src="DO_Analysis_Summary_files/figure-gfm/plot_ls_means_site_first_GAMM-1.png" style="display: block; margin: auto;" />
 
 #### By Year
 
@@ -1405,7 +740,7 @@ plot(by_year) +
   theme_cbep(base_size = 12)
 ```
 
-<img src="DO_Analysis_Summary_files/figure-gfm/unnamed-chunk-35-1.png" style="display: block; margin: auto;" />
+<img src="DO_Analysis_Summary_files/figure-gfm/plot_ls_means_year_first_GAMM-1.png" style="display: block; margin: auto;" />
 2010 was a partial year, so despite (or perhaps because of) adjusting
 for months, the 2010 estimate may be misleading. Since then, basically,
 2016 is way worse than the other years.
@@ -1435,7 +770,7 @@ if (! file.exists("models/do_gamm_2.rds")) {
 }
 #> Warning in smooth.construct.tp.smooth.spec(object, dk$data, dk$knots): basis dimension, k, increased to minimum possible
 #>    user  system elapsed 
-#> 2336.19    5.27 2342.84
+#> 2464.52    5.08 2471.01
 ```
 
 ### ANOVA
@@ -1514,7 +849,7 @@ summary(do_gamm_2$lme)$modelStruct$corStruct
 plot(do_gamm_2$gam)
 ```
 
-<img src="DO_Analysis_Summary_files/figure-gfm/unnamed-chunk-39-1.png" style="display: block; margin: auto;" />
+<img src="DO_Analysis_Summary_files/figure-gfm/smoother_second_GAMM-1.png" style="display: block; margin: auto;" />
 
 ### Diagnostic Plots
 
@@ -1522,7 +857,7 @@ plot(do_gamm_2$gam)
 gam.check(do_gamm_2$gam)
 ```
 
-<img src="DO_Analysis_Summary_files/figure-gfm/unnamed-chunk-40-1.png" style="display: block; margin: auto;" />
+<img src="DO_Analysis_Summary_files/figure-gfm/diagnostics_second_GAMM-1.png" style="display: block; margin: auto;" />
 
     #> 
     #> 'gamm' based fit - care required with interpretation.
@@ -1531,7 +866,7 @@ gam.check(do_gamm_2$gam)
     #> indicate that k is too low, especially if edf is close to k'.
     #> 
     #>               k'  edf k-index p-value    
-    #> s(T_Median) 2.00 1.99    0.87  <2e-16 ***
+    #> s(T_Median) 2.00 1.99    0.85  <2e-16 ***
     #> ---
     #> Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
@@ -1541,10 +876,8 @@ The model has essentially the same inadequacies as the prior model.
 
 We again create the call object, and associate it with the model, and
 finally manually construct a reference grid before calling `emmeans()`
-to extract marginal means. This workflow has the advantage that it
-requires us to think carefully about the structure of the reference
-grid. We explicitly specify that we want the marginal means estimated at
-Year = 2014.
+to extract marginal means. We explicitly specify that we want the
+marginal means estimated at Year = 2014.
 
 ``` r
 the_call <-  quote(gamm(DO_Median ~ Site + 
@@ -1555,6 +888,7 @@ the_call <-  quote(gamm(DO_Median ~ Site +
                        method = 'REML',
                        data = full_data))
 do_gamm_2$gam$call <- the_call
+my_ref_grid <- ref_grid(do_gamm_2, cov.reduce = median) 
 ```
 
 #### By Site
@@ -1562,14 +896,14 @@ do_gamm_2$gam$call <- the_call
 ``` r
 (by_site_2 <- summary(emmeans(my_ref_grid, ~ Site)))
 #>  Site emmean    SE   df lower.CL upper.CL
-#>  S07    8.04 0.162 6083     7.72     8.35
-#>  S06B   7.81 0.207 6083     7.40     8.21
-#>  S05    7.17 0.318 6083     6.55     7.79
-#>  S17    8.50 0.235 6083     8.04     8.96
-#>  S03    8.70 0.158 6083     8.39     9.01
-#>  S01    8.55 0.159 6083     8.24     8.86
+#>  S07    7.65 0.164 8247     7.33     7.97
+#>  S06B   7.44 0.217 8247     7.01     7.86
+#>  S05    7.24 0.309 8247     6.63     7.85
+#>  S17    8.13 0.258 8247     7.62     8.64
+#>  S03    8.33 0.158 8247     8.02     8.64
+#>  S01    8.13 0.158 8247     7.81     8.44
 #> 
-#> Results are averaged over the levels of: Month, Year_f 
+#> Results are averaged over the levels of: Year_f 
 #> Confidence level used: 0.95
 ```
 
@@ -1577,7 +911,7 @@ do_gamm_2$gam$call <- the_call
 plot(by_site_2) + 
   xlab('DO (mg/l)\n(Flow and Temperature Adjusted)') +
   ylab("Upstream         Main Stem          Lower Tribs") +
-  annotate('text', 11, 2.5, label = labl, size = 3) +
+  #annotate('text', 11, 2.5, label = labl, size = 3) +
   xlim(0,12) +
   geom_vline(xintercept =  7, color = 'orange') +
   geom_vline(xintercept =  5, color = 'red') +
@@ -1585,7 +919,7 @@ plot(by_site_2) +
   theme_cbep(base_size = 12)
 ```
 
-<img src="DO_Analysis_Summary_files/figure-gfm/unnamed-chunk-43-1.png" style="display: block; margin: auto;" />
+<img src="DO_Analysis_Summary_files/figure-gfm/plot_emms_site_second_gamm-1.png" style="display: block; margin: auto;" />
 
 #### By Year
 
@@ -1619,7 +953,7 @@ plot(by_year_2) +
   theme_cbep(base_size = 12)
 ```
 
-<img src="DO_Analysis_Summary_files/figure-gfm/unnamed-chunk-45-1.png" style="display: block; margin: auto;" />
+<img src="DO_Analysis_Summary_files/figure-gfm/plot_emms_year_second_gamm-1.png" style="display: block; margin: auto;" />
 
 # Compare Marginal Means From Two Models
 
@@ -1661,11 +995,11 @@ ggplot(aes(x = observed)) +
   ylim(6.5,9.5)
 ```
 
-<img src="DO_Analysis_Summary_files/figure-gfm/unnamed-chunk-47-1.png" style="display: block; margin: auto;" />
+<img src="DO_Analysis_Summary_files/figure-gfm/plot_compare_mods_to_obs_site-1.png" style="display: block; margin: auto;" />
 
 Correspondence with observed means is only so-so, as is expected with
-uneven sampling histories. The main difference is in shifting position
-of S05 and S17. These sites have inconsistent sampling histories, so
+uneven sampling histories. The main difference is in the positions of
+S05 and S17. These sites have inconsistent sampling histories, so
 marginal means are adjusted by year. S17 was observed principally during
 “bad” years, so the marginal mean (which is averaged across for ALL
 years) as adjusted upwards, since the model concludes the observed
@@ -1695,7 +1029,7 @@ ggplot(aes(x = observed)) +
   ylab('Marginal Means') # +
 ```
 
-<img src="DO_Analysis_Summary_files/figure-gfm/unnamed-chunk-48-1.png" style="display: block; margin: auto;" />
+<img src="DO_Analysis_Summary_files/figure-gfm/plot_compare_mods_to_obs_year-1.png" style="display: block; margin: auto;" />
 
 ``` r
  # xlim(6.5, 9.5) +
@@ -1717,13 +1051,13 @@ month, which is not a term in the smaller model.
 
 # Hierarchical Analysis of Trends
 
-We hierarchical GAMs that includes both autocorrelated errors and a
-random term by year. The concept is that year to year variation can be
-thought of as random based on annual weather, or perhaps watershed flow
-conditions. We test for a long term trend against that random term, to
-minimize the risk that we overinterpret year to year variability as a
-trend. But note that this model also includes terms for stream water
-temperature and flow.
+We develop hierarchical GAMs that includes both autocorrelated errors
+and a random term by year. The concept is that year to year variation
+can be thought of as random based on annual weather, or perhaps
+watershed flow conditions. We test for a long term trend against that
+random term, to minimize the risk that we overinterpret year to year
+variability as a trend. But note that this model also includes terms for
+stream water temperature and flow.
 
 ## Model 1 : Site by Year interaction
 
@@ -1754,6 +1088,8 @@ if (! file.exists("models/do_gamm_trend_1.rds")) {
 } else {
   do_gamm_trend_1 <- readRDS("models/do_gamm_trend_1.rds")
 }
+#>    user  system elapsed 
+#>   26.85    0.55   27.35
 ```
 
 ### ANOVA
@@ -1846,7 +1182,7 @@ summary(do_gamm_trend_1$lme)$modelStruct$corStruct
 plot(do_gamm_trend_1$gam)
 ```
 
-<img src="DO_Analysis_Summary_files/figure-gfm/unnamed-chunk-52-1.png" style="display: block; margin: auto;" />
+<img src="DO_Analysis_Summary_files/figure-gfm/smoother_trend_GAMM_1-1.png" style="display: block; margin: auto;" />
 
 ### Examine Marginal Means
 
@@ -1877,7 +1213,7 @@ emmip(do_gamm_trend_1, Site ~ Year,
   ylab('Predicted DO Concentration')
 ```
 
-<img src="DO_Analysis_Summary_files/figure-gfm/unnamed-chunk-54-1.png" style="display: block; margin: auto;" />
+<img src="DO_Analysis_Summary_files/figure-gfm/plot)emms_trend_GAMM_1-1.png" style="display: block; margin: auto;" />
 
 That suggests that Site S05 has a low average dissolved oxygen, and a
 steep decline in DO over time. In fact, that is mostly an artifact of
@@ -1893,7 +1229,7 @@ full_data %>%
             do_median = median(DO_Median))
 #> # A tibble: 4 x 4
 #>    Year     n do_mean do_median
-#> * <int> <int>   <dbl>     <dbl>
+#>   <int> <int>   <dbl>     <dbl>
 #> 1  2010    66    8.95      7.82
 #> 2  2011    72    8.42      8.14
 #> 3  2013   122    9.64      9.28
@@ -1909,7 +1245,7 @@ We conclude that the full interaction model is problematic.
 
 This model does slight violence to the prior analysis, but is arguably a
 better description of what we know from the available data. It avoids
-overfitting the short site by site records.
+overfitting the short records at two sites.
 
 ``` r
 if (! file.exists("models/do_gamm_trend_2.rds")) {
@@ -1930,6 +1266,8 @@ if (! file.exists("models/do_gamm_trend_2.rds")) {
 } else {
   do_gamm_trend_2 <- readRDS("models/do_gamm_trend_2.rds")
 }
+#>    user  system elapsed 
+#>   26.06    0.51   26.38
 ```
 
 ### ANOVA
@@ -1957,7 +1295,7 @@ anova(do_gamm_trend_2$gam)
 
 Here the Year term AND the Site terms are statistically significant.
 
-## Summary
+### Summary
 
 ``` r
 summary(do_gamm_trend_2$gam)
@@ -1999,7 +1337,7 @@ summary(do_gamm_trend_2$gam)
 #>   Scale est. = 1.9092    n = 6113
 ```
 
-## Estimated Daily Autocorrelation
+### Estimated Daily Autocorrelation
 
 ``` r
 summary(do_gamm_trend_2$lme)$modelStruct$corStruct
@@ -2014,7 +1352,7 @@ summary(do_gamm_trend_2$lme)$modelStruct$corStruct
 plot(do_gamm_trend_2$gam)
 ```
 
-<img src="DO_Analysis_Summary_files/figure-gfm/unnamed-chunk-59-1.png" style="display: block; margin: auto;" />
+<img src="DO_Analysis_Summary_files/figure-gfm/smoother_trend_gamm_2-1.png" style="display: block; margin: auto;" />
 
 ### Examine Marginal Means
 
@@ -2055,7 +1393,7 @@ plot(by_site) +
   coord_flip() 
 ```
 
-<img src="DO_Analysis_Summary_files/figure-gfm/unnamed-chunk-61-1.png" style="display: block; margin: auto;" />
+<img src="DO_Analysis_Summary_files/figure-gfm/plot_trend_gamm_2_quick-1.png" style="display: block; margin: auto;" />
 
 Note that we STILL predict low DO for S05 in 2014, but the prediction is
 actually not far of the observed averages.
