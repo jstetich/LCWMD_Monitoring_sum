@@ -50,7 +50,7 @@ Curtis C. Bohlen, Casco Bay Estuary Partnership
 
 The Long Creek Watershed, almost three and a half square miles in area,
 is dominated by commercial land use. The Maine Mall is one of the
-largest land owners in the watershed, and it is surrounded by a range of
+largest landowners in the watershed, and it is surrounded by a range of
 commercial businesses, from medical offices, to car washes. About a
 third of the watershed in impervious surfaces like roads, parking lots,
 and rooftops.
@@ -119,7 +119,7 @@ measurement of conductivity. The chloride-conductivity correlations is
 fairly close and robust, but estimation is an additional source of
 error, although generally on the level of 10% or less.
 
-Further, exceedences of the acute chloride threshold, the “CMC” are
+Further, exceedances of the acute chloride threshold, the “CMC” are
 relatively rare, which limits ability to construct robust models.
 
 # Import Libraries
@@ -216,7 +216,7 @@ Site_IC_Data
 
 ## Main Data
 
-We remove 2019 data, as we don’t have a complete year’s worth of data,
+We removed 2019 data, as we don’t have a complete year’s worth of data,
 which may bias annual summaries.
 
 Note that this data does NOT include all of the predictors used in some
@@ -286,7 +286,7 @@ possible instability of the pressure sensors, it might make sense to
 remove them all.
 
 Note that removing depth observations from Site S05 will remove those
-DATES from any model that uses the `FlowIndex` variable (see below) as a
+dates from any model that uses the `FlowIndex` variable (see below) as a
 predictor.
 
 ``` r
