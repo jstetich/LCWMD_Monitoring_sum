@@ -186,7 +186,7 @@ Read in the data from the Derived Data folder.
 
 Note that we filter out data from 2019 because that is only a partial
 year, which might affect estimation of things like seasonal trends. We
-could add it back in, but with care….
+could add it back in, but with care.
 
 ``` r
 fn <- "Full_Data.csv"
