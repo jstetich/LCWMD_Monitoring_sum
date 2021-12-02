@@ -53,7 +53,7 @@ The Long Creek Watershed, almost three and a half square miles in area,
 is dominated by commercial land use. The Maine Mall is one of the
 largest land owners in the watershed, and it is surrounded by a range of
 commercial businesses, from medical offices, to car washes. About a
-third of the watershed in impervious surfaces like roads, parking lots,
+third of the watershed is impervious surfaces like roads, parking lots,
 and rooftops.
 
 Landowners with an acre or more of impervious area are required to get a
@@ -325,7 +325,7 @@ We noted extreme dissolved oxygen data at the end of 2016. Values were
 both extreme and highly variable. (See discussion in the DO Analysis
 workbooks).
 
-We decide we should remove chloride and oxygen observations after
+We decided we should remove chloride and oxygen observations after
 October 15th.
 
 ``` r
@@ -492,7 +492,7 @@ xt_pct(~Year + ClassC_PctSat, exceeds)
 #> 2018   427  590 42.0
 ```
 
-The two oxygen-related exceedences are correlated. IN particular, no
+The two oxygen-related exceedances are correlated. In particular, no
 samples met the Percent Saturation standard, but failed the dissolved
 oxygen standard.
 
