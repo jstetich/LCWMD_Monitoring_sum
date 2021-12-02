@@ -99,7 +99,7 @@ set, and missing values at the beginning of each season at each site
 prevent estimation near season and site transitions in the sequential
 data anyway.
 
-On the whole, this models is OK, but not great. It has heavy tailed,
+On the whole, these models are OK, but not great. It has heavy tailed,
 skewed residuals. We should not trust the asymptotic p values. But since
 sample sizes are large and results tend to have high statistical
 significance, p values are not much use anyway.
@@ -642,7 +642,7 @@ gam.check(chl_gamm$gam)
 As with the linear model, we have a skewed, slightly heavy tailed
 distribution of residuals, with a couple of very large outliers. There
 is perhaps slight evidence for lack of complete independence between
-residuals and predictors. T his model is adequate, but not great. For
+residuals and predictors. This model is adequate, but not great. For
 careful work, we should probably use bootstrapped confidence intervals
 or something similar, but for our purposes, that is probably overkill.
 
