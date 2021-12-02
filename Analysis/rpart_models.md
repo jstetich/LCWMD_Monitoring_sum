@@ -100,7 +100,7 @@ There are no legally binding Maine criteria for maximum stream
 temperature, but we can back into thresholds based on research on
 thermal tolerance of brook trout in streams. A study from Michigan and
 Wisconsin, showed that trout are found in streams with daily mean water
-temperatures as high as 25.3°C, but only if the period of exceedence of
+temperatures as high as 25.3°C, but only if the period of exceedance of
 that daily average temperature is short – only one day. Similarly, the
 one day daily maximum temperature above which trout were never found was
 27.6°C. That generates two temperature criteria, one for daily averages,
@@ -262,7 +262,7 @@ possible instability of the pressure sensors, it might make sense to
 remove them all.
 
 Note that removing depth observations from Site S05 will remove those
-DATES from any model that uses the `FlowIndex` variable (see below) as a
+dates from any model that uses the `FlowIndex` variable (see below) as a
 predictor.
 
 ``` r
